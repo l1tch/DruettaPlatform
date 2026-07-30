@@ -32,11 +32,20 @@ function normalizzaTribunale(tribunale: string): string {
   return `TRIB ${pulito}`;
 }
 
-function estraiAnnoRg(rg?: string | null): { numero: string; anno: string } | null {
+// Estrae numero/anno dal campo R.G. di una causa (formato "numero/anno").
+export function estraiAnnoRg(rg?: string | null): { numero: string; anno: string } | null {
   if (!rg) return null;
   const match = rg.match(/(\d+)\s*\/\s*(\d{4})/);
   if (!match) return null;
   return { numero: match[1], anno: match[2] };
+}
+
+// Estrae anno/RG dal nome di una cartella Drive che segue la convenzione
+// anno_rg_parte_controparte_tribunale (es. "2025_8271_...").
+export function estraiAnnoRgDaNomeCartella(nomeCartella: string): { anno: string; numero: string } | null {
+  const match = nomeCartella.trim().match(/^(\d{4})_(\d+)_/);
+  if (!match) return null;
+  return { anno: match[1], numero: match[2] };
 }
 
 interface DatiCausaPerNome {

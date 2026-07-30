@@ -201,6 +201,45 @@ model DocumentoDrive {
 }
 
 // ---------------------------------------------------------------------------
+// Suggerimenti da scansione automatica di Drive: la cartella "cause pendenti"
+// viene scansionata periodicamente (cron) per trovare cartelle nuove o non
+// ancora collegate, individuate tramite ANNO_RG nel nome. Il collegamento a
+// una causa esistente non ambiguo avviene in automatico; tutto il resto
+// (cartelle senza causa corrispondente, RG duplicati, nomi non riconosciuti)
+// finisce in coda per la conferma di un avvocato/segreteria: questa
+// piattaforma non crea mai da sola un nuovo fascicolo.
+// ---------------------------------------------------------------------------
+
+enum TipoSuggerimentoCartella {
+  NUOVA_CAUSA     // nessuna causa esistente con lo stesso ANNO_RG
+  CONFLITTO_RG    // ANNO_RG ambiguo: piu' cause corrispondono, o la causa trovata e' gia' collegata a un'altra cartella
+  NON_RICONOSCIUTA // il nome della cartella non rispetta la convenzione anno_rg_...
+}
+
+enum StatoSuggerimentoCartella {
+  IN_ATTESA
+  APPROVATA
+  RIFIUTATA
+}
+
+model SuggerimentoCartella {
+  id              String                    @id @default(cuid())
+  driveFolderId   String                    @unique
+  driveFolderUrl  String?
+  nomeCartella    String
+  anno            String?
+  rg              String?
+  tipo            TipoSuggerimentoCartella
+  causeCandidate  Json?                     // per CONFLITTO_RG: [{causaId, fascicolo, tribunale}]
+  stato           StatoSuggerimentoCartella @default(IN_ATTESA)
+  causaCollegataId String?
+  createdAt       DateTime                  @default(now())
+  aggiornatoIl    DateTime                  @updatedAt
+
+  @@index([stato])
+}
+
+// ---------------------------------------------------------------------------
 // Log invii email (automatiche e manuali)
 // ---------------------------------------------------------------------------
 

@@ -30,6 +30,14 @@ Google (Gmail e Drive).
   collegato esista davvero, sia accessibile e non sia nel cestino. Una volta
   collegata la cartella, da un fascicolo è possibile elencare, caricare e
   aggiornare i documenti al suo interno.
+- **Scansione automatica della cartella "cause pendenti"**: un job periodico
+  (cron) individua le sottocartelle tramite ANNO_RG nel nome e collega in
+  automatico solo le corrispondenze non ambigue con un fascicolo pendente
+  ancora privo di cartella. Tutto il resto (nessuna causa corrispondente, R.G.
+  duplicato/ambiguo, nome non conforme, o causa già collegata a un'altra
+  cartella) finisce in coda di revisione in **Suggerimenti Drive**: la
+  piattaforma non crea né sovrascrive mai un collegamento da sola in questi
+  casi, va confermata da un avvocato/segreteria.
 - **Email automatiche**: promemoria per udienze e termini in scadenza nelle
   successive 48 ore, inviati tramite Gmail; ogni invio (manuale o automatico)
   è tracciato in un log.
@@ -114,9 +122,12 @@ Requisiti minimi per il trattamento di dati personali e giudiziari (GDPR):
 4. Impostare `ALLOWED_EMAIL_DOMAINS` con il dominio email dello studio, così
    solo gli account autorizzati possono accedere.
 
-Non serve configurare alcuna cartella radice: le cartelle dei fascicoli
-esistono già su Drive (create a mano dallo studio) e vengono collegate di
-volta in volta incollando il link nel form del fascicolo.
+Non serve configurare alcuna cartella radice per i singoli fascicoli: le
+cartelle esistono già su Drive (create a mano dallo studio) e vengono
+collegate di volta in volta incollando il link nel form. Per abilitare la
+**scansione automatica** (facoltativa) impostare invece
+`GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` con l'ID della cartella che raccoglie
+tutte le sottocartelle delle cause pendenti.
 
 ## Variabili d'ambiente
 
@@ -129,8 +140,9 @@ Vedere `.env.example` per l'elenco completo con descrizione. In sintesi:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth Google (login, Drive, Gmail) |
 | `ALLOWED_EMAIL_DOMAINS` | Domini email autorizzati ad accedere |
 | `INITIAL_ADMIN_EMAIL` | Email che riceve il ruolo ADMIN al primo accesso |
+| `GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` | Cartella radice delle cause pendenti, per la scansione automatica (facoltativa) |
 | `FIELD_ENCRYPTION_KEY` | Chiave AES-256 per la cifratura dei campi sensibili |
-| `CRON_SECRET` | Token per l'endpoint dei promemoria automatici |
+| `CRON_SECRET` | Token per gli endpoint invocati da cron (promemoria, scansione Drive) |
 
 ## Promemoria automatici
 
@@ -143,13 +155,43 @@ di scheduling del proprio hosting), passando l'header:
 x-cron-secret: <valore di CRON_SECRET>
 ```
 
+## Scansione automatica cartella Drive
+
+L'endpoint `POST /api/drive/scansione` (stessa protezione via header
+`x-cron-secret`, va schedulato es. ogni ora) scansiona la cartella indicata in
+`GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` e per ogni sottocartella:
+
+1. **Estrae ANNO_RG** dal nome (i primi due segmenti, es. `2025_8271_...`).
+2. Cerca fascicoli **pendenti** con lo stesso R.G. (`numero/anno`).
+3. **Match unico e fascicolo senza cartella** → collega automaticamente
+   (`driveFolderId`/`driveFolderUrl` aggiornati, con audit log).
+4. **Match unico ma fascicolo già collegato a un'altra cartella** → non
+   sovrascrive: crea un suggerimento di tipo "R.G. ambiguo" da rivedere.
+5. **R.G. duplicato su più fascicoli** → prova a disambiguare confrontando il
+   nome reale della cartella con quello atteso per ciascun candidato (vedi
+   convenzione sopra); se resta ambiguo, mette tutti i candidati in coda.
+6. **Nessun fascicolo con quel R.G.** → suggerimento di tipo "Nuova causa".
+7. **Nome cartella non conforme alla convenzione** → suggerimento di tipo
+   "Nome non riconosciuto".
+
+La piattaforma **non crea mai una causa da sola**: i casi 4-7 finiscono nella
+pagina **Suggerimenti Drive**, dove un avvocato/segreteria può collegare la
+cartella a una causa esistente, aprire il form guidato per crearne una nuova
+(precompilato con R.G. e link alla cartella), oppure ignorare il
+suggerimento. Un suggerimento già approvato o ignorato non ricompare nelle
+scansioni successive.
+
+La logica di decisione (`pianificaAzioniScansione` in `src/lib/driveScan.ts`)
+è pura e separata dalle chiamate a Drive/DB, per poter essere verificata con
+test mirati senza credenziali reali.
+
 ## Struttura del progetto
 
 ```
-prisma/schema.prisma       Modello dati (cause, clienti, collegamenti, audit, auth)
-src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail
+prisma/schema.prisma       Modello dati (cause, clienti, collegamenti, suggerimenti Drive, audit, auth)
+src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail, scansione cartelle
 src/app/api/                API REST (cause, clienti, collegamenti, drive, email, utenti)
-src/app/dashboard/          Pagine applicative (cause, clienti, collegamenti, utenti)
+src/app/dashboard/          Pagine applicative (cause, clienti, collegamenti, suggerimenti Drive, utenti)
 src/components/             DataGrid stile foglio di calcolo, form guidati, modali di conferma
 ```
 
