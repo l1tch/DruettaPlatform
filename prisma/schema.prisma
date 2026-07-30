@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Autenticazione (NextAuth) e ruoli
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN       // accesso completo, gestione utenti
+  AVVOCATO    // accesso completo a cause/clienti, non gestisce utenti
+  SEGRETERIA  // inserimento/modifica dati, invio email, no eliminazioni definitive
+  SOLA_LETTURA // solo consultazione
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(SOLA_LETTURA)
+  attivo        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  auditLogs  AuditLog[]
+  emailsSent EmailLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Cause (fascicoli) - un record per riga dei fogli "Pendenti / Concluse / Esecuzioni"
+// ---------------------------------------------------------------------------
+
+enum StatoCausa {
+  PENDENTI
+  CONCLUSE
+  ESECUZIONI
+}
+
+model Causa {
+  id              String     @id @default(cuid())
+  stato           StatoCausa @default(PENDENTI)
+
+  fascicolo       String     // Fascicolo
+  driveFolderId   String?    // id cartella Drive collegata (colonna "Drive")
+  driveFolderUrl  String?
+  tribunale       String?
+  rg              String?    // R.G.
+  ricorrenti      String?    // Nomi ricorrenti
+  controparte     String?
+  ultimaUdienza   String?    // testo libero riassuntivo
+  dataUdienza     DateTime?
+  adempimenti     String?
+  termine         DateTime?
+  fattoONo        Boolean    @default(false)
+  propostaTrasmessa Boolean  @default(false)
+  dataProposta    DateTime?
+  note            String?    @db.Text
+  procure185      Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clienti   ClienteCausa[]
+  documenti DocumentoDrive[]
+  emailLog  EmailLog[]
+  audit     AuditLog[]
+
+  @@index([stato])
+  @@index([rg])
+}
+
+// ---------------------------------------------------------------------------
+// Clienti - un record per riga del foglio "Clienti"
+// ---------------------------------------------------------------------------
+
+model Cliente {
+  id       String  @id @default(cuid())
+  citta    String?
+  cognome  String
+  nome     String
+  piattaforma String?
+  note        String? @db.Text
+
+  natoA        String?   // "nato a"
+  natoIl       DateTime? // "il ..."
+  residenteIn  String?
+
+  // Campo cifrato (AES-256-GCM) a livello applicativo: contiene il JSON {iv, tag, data}
+  codiceFiscaleCifrato String? @db.Text
+
+  richiestaDati      Boolean  @default(false)
+  orario             String?
+  periodoDiLavoro    String?
+  mezzo              String?
+  dataRicevimento    DateTime?
+  email              String?
+  numero             String?
+  pagamento          String?
+  iscritto           Boolean  @default(false)
+  docMancanti        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cause     ClienteCausa[]
+  audit     AuditLog[]
+
+  @@index([cognome, nome])
+}
+
+// ---------------------------------------------------------------------------
+// Collegamento Clienti <-> Cause (foglio di raccordo con RG e ultimi documenti Drive)
+// ---------------------------------------------------------------------------
+
+model ClienteCausa {
+  id        String   @id @default(cuid())
+  clienteId String
+  causaId   String
+
+  ruoloCliente String? // es. ricorrente, controparte, terzo
+  ultimoDocumentoNome String? // es. "Verbale udienza 12/03/2026"
+  ultimoDocumentoDriveId String?
+  ultimoDocumentoUrl     String?
+  ultimoDocumentoData    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  causa   Causa   @relation(fields: [causaId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, causaId])
+  @@index([causaId])
+  @@index([clienteId])
+}
+
+// ---------------------------------------------------------------------------
+// Documenti Google Drive collegati a una causa (cache locale dei metadati)
+// ---------------------------------------------------------------------------
+
+model DocumentoDrive {
+  id            String   @id @default(cuid())
+  causaId       String
+  driveFileId   String
+  nome          String
+  mimeType      String?
+  webViewLink   String?
+  tipo          String?  // es. "verbale", "atto", "procura"
+  caricatoDaId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  causa Causa @relation(fields: [causaId], references: [id], onDelete: Cascade)
+
+  @@index([causaId])
+  @@unique([driveFileId])
+}
+
+// ---------------------------------------------------------------------------
+// Log invii email (automatiche e manuali)
+// ---------------------------------------------------------------------------
+
+enum EmailStato {
+  INVIATA
+  FALLITA
+  IN_CODA
+}
+
+model EmailLog {
+  id         String     @id @default(cuid())
+  causaId    String?
+  destinatario String
+  oggetto      String
+  corpo        String   @db.Text
+  stato        EmailStato @default(IN_CODA)
+  errore       String?
+  inviataDaId  String?
+  automatica   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  causa    Causa? @relation(fields: [causaId], references: [id], onDelete: SetNull)
+  inviataDa User?  @relation(fields: [inviataDaId], references: [id], onDelete: SetNull)
+
+  @@index([causaId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail (obbligatorio per dati di uno studio legale)
+// ---------------------------------------------------------------------------
+
+enum AuditAzione {
+  CREAZIONE
+  MODIFICA
+  ELIMINAZIONE
+  ACCESSO
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  azione     AuditAzione
+  entita     String      // "Causa" | "Cliente" | "ClienteCausa" | ...
+  entitaId   String?
+  utenteId   String?
+  prima      Json?
+  dopo       Json?
+  createdAt  DateTime    @default(now())
+
+  utente User?   @relation(fields: [utenteId], references: [id], onDelete: SetNull)
+  causa   Causa?  @relation(fields: [causaId], references: [id], onDelete: SetNull)
+  causaId String?
+  cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  clienteId String?
+
+  @@index([entita, entitaId])
+  @@index([utenteId])
+}
