@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { causaSchema, CausaInput } from "@/lib/validazione";
 import { CampoTesto, CampoData, CampoCheckbox, CampoSelezione } from "@/components/forms/Campi";
 import { WizardProgress, useWizard } from "@/components/forms/Wizard";
@@ -31,25 +31,42 @@ function toInputDate(v?: string | Date | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+function calcolaValoriForm(valoriIniziali: Partial<CausaInput> | undefined, statoPredefinito: CausaInput["stato"] | undefined): CausaInput {
+  return {
+    stato: statoPredefinito ?? "PENDENTI",
+    fascicolo: "",
+    fattoONo: false,
+    propostaTrasmessa: false,
+    procure185: false,
+    ...valoriIniziali,
+    dataUdienza: toInputDate(valoriIniziali?.dataUdienza as any) as any,
+    termine: toInputDate(valoriIniziali?.termine as any) as any,
+    dataProposta: toInputDate(valoriIniziali?.dataProposta as any) as any,
+  };
+}
+
 export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, onSalva, onChiudi, onRichiediEliminazione }: CausaFormProps) {
   const {
     register,
     handleSubmit,
     trigger,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CausaInput>({
     resolver: zodResolver(causaSchema),
-    defaultValues: {
-      stato: statoPredefinito ?? "PENDENTI",
-      fattoONo: false,
-      propostaTrasmessa: false,
-      procure185: false,
-      ...valoriIniziali,
-      dataUdienza: toInputDate(valoriIniziali?.dataUdienza as any) as any,
-      termine: toInputDate(valoriIniziali?.termine as any) as any,
-      dataProposta: toInputDate(valoriIniziali?.dataProposta as any) as any,
-    },
+    defaultValues: calcolaValoriForm(valoriIniziali, statoPredefinito),
   });
+
+  // useForm applica i defaultValues solo al primo mount: questo componente
+  // resta montato tra un'apertura e l'altra del modale, quindi bisogna
+  // reinizializzare esplicitamente il form ogni volta che si apre, altrimenti
+  // "Modifica" mostrerebbe i campi vuoti invece dei dati del fascicolo.
+  useEffect(() => {
+    if (aperto) {
+      reset(calcolaValoriForm(valoriIniziali, statoPredefinito));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperto, valoriIniziali]);
 
   const steps = [
     {
@@ -113,6 +130,13 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
   const [datiPendenti, setDatiPendenti] = useState<CausaInput | null>(null);
   const [erroreServer, setErroreServer] = useState<string | null>(null);
   const [salvataggioInCorso, setSalvataggioInCorso] = useState(false);
+
+  useEffect(() => {
+    if (aperto) {
+      wizard.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperto]);
 
   if (!aperto) return null;
 

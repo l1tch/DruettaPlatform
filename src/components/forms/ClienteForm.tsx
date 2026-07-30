@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clienteSchema, ClienteInput } from "@/lib/validazione";
 import { CampoTesto, CampoData, CampoCheckbox } from "@/components/forms/Campi";
 import { WizardProgress, useWizard } from "@/components/forms/Wizard";
@@ -24,22 +24,40 @@ function toInputDate(v?: string | Date | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+function calcolaValoriForm(valoriIniziali: Partial<ClienteInput> | undefined): ClienteInput {
+  return {
+    cognome: "",
+    nome: "",
+    richiestaDati: false,
+    iscritto: false,
+    ...valoriIniziali,
+    natoIl: toInputDate(valoriIniziali?.natoIl as any) as any,
+    dataRicevimento: toInputDate(valoriIniziali?.dataRicevimento as any) as any,
+  };
+}
+
 export function ClienteForm({ aperto, modalita, valoriIniziali, onSalva, onChiudi, onRichiediEliminazione }: ClienteFormProps) {
   const {
     register,
     handleSubmit,
     trigger,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ClienteInput>({
     resolver: zodResolver(clienteSchema),
-    defaultValues: {
-      richiestaDati: false,
-      iscritto: false,
-      ...valoriIniziali,
-      natoIl: toInputDate(valoriIniziali?.natoIl as any) as any,
-      dataRicevimento: toInputDate(valoriIniziali?.dataRicevimento as any) as any,
-    },
+    defaultValues: calcolaValoriForm(valoriIniziali),
   });
+
+  // Il form resta montato tra un'apertura e l'altra: senza questo reset,
+  // "Modifica" mostrerebbe sempre i valori del primo mount invece dei dati
+  // del cliente selezionato (i defaultValues di useForm si applicano una
+  // sola volta).
+  useEffect(() => {
+    if (aperto) {
+      reset(calcolaValoriForm(valoriIniziali));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperto, valoriIniziali]);
 
   const steps = [
     {
@@ -94,6 +112,13 @@ export function ClienteForm({ aperto, modalita, valoriIniziali, onSalva, onChiud
   const [datiPendenti, setDatiPendenti] = useState<ClienteInput | null>(null);
   const [erroreServer, setErroreServer] = useState<string | null>(null);
   const [salvataggioInCorso, setSalvataggioInCorso] = useState(false);
+
+  useEffect(() => {
+    if (aperto) {
+      wizard.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperto]);
 
   if (!aperto) return null;
 

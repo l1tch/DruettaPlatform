@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { collegamentoSchema, CollegamentoInput } from "@/lib/validazione";
 import { CampoTesto, CampoData, CampoSelezione } from "@/components/forms/Campi";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -32,20 +32,40 @@ function toInputDate(v?: string | Date | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+function calcolaValoriForm(
+  valoriIniziali: CollegamentoFormProps["valoriIniziali"],
+  clienti: Opzione[],
+  cause: Opzione[]
+): CollegamentoInput {
+  return {
+    clienteId: clienti[0]?.id ?? "",
+    causaId: cause[0]?.id ?? "",
+    ...valoriIniziali,
+    ultimoDocumentoData: toInputDate(valoriIniziali?.ultimoDocumentoData as any) as any,
+  };
+}
+
 export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriIniziali, onSalva, onChiudi, onRichiediEliminazione }: CollegamentoFormProps) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CollegamentoInput>({
     resolver: zodResolver(collegamentoSchema),
-    defaultValues: {
-      clienteId: clienti[0]?.id ?? "",
-      causaId: cause[0]?.id ?? "",
-      ...valoriIniziali,
-      ultimoDocumentoData: toInputDate(valoriIniziali?.ultimoDocumentoData as any) as any,
-    },
+    defaultValues: calcolaValoriForm(valoriIniziali, clienti, cause),
   });
+
+  // Il form resta montato tra un'apertura e l'altra: senza questo reset,
+  // "Modifica" mostrerebbe sempre i valori del primo mount invece dei dati
+  // del collegamento selezionato (i defaultValues di useForm si applicano
+  // una sola volta).
+  useEffect(() => {
+    if (aperto) {
+      reset(calcolaValoriForm(valoriIniziali, clienti, cause));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperto, valoriIniziali]);
 
   const [confermaAperta, setConfermaAperta] = useState(false);
   const [datiPendenti, setDatiPendenti] = useState<CollegamentoInput | null>(null);
