@@ -21,18 +21,18 @@ interface BaseProps {
 }
 
 const baseInputClass =
-  "w-full rounded border border-studio-300 px-3 py-1.5 text-sm focus:border-studio-500 focus:outline-none focus:ring-1 focus:ring-studio-500";
+  "w-full border border-ink-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
 
 function Wrapper({ label, name, errors, required, children }: BaseProps & { children: React.ReactNode }) {
   const errore = erroreDi(errors, name);
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-medium text-studio-700">
+      <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-700">
         {label}
-        {required && <span className="text-red-500"> *</span>}
+        {required && <span className="text-brand-500"> *</span>}
       </span>
       {children}
-      {errore && <span className="mt-1 block text-xs text-red-600">{errore}</span>}
+      {errore && <span className="mt-1 block text-xs text-brand-600">{errore}</span>}
     </label>
   );
 }
@@ -65,8 +65,8 @@ export function CampoData(props: BaseProps) {
 
 export function CampoCheckbox({ label, name, register }: Omit<BaseProps, "errors">) {
   return (
-    <label className="flex items-center gap-2 text-sm text-studio-700">
-      <input type="checkbox" {...register(name)} className="h-4 w-4 rounded border-studio-300" />
+    <label className="flex items-center gap-2 text-sm text-ink-700">
+      <input type="checkbox" {...register(name)} className="h-4 w-4 border-ink-300 accent-brand-500" />
       {label}
     </label>
   );

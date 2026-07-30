@@ -33,7 +33,7 @@ const ETICHETTA_TIPO: Record<TipoSuggerimento, string> = {
 const COLORE_TIPO: Record<TipoSuggerimento, string> = {
   NUOVA_CAUSA: "bg-blue-50 text-blue-700 border-blue-200",
   CONFLITTO_RG: "bg-amber-50 text-amber-700 border-amber-200",
-  NON_RICONOSCIUTA: "bg-studio-100 text-studio-600 border-studio-200",
+  NON_RICONOSCIUTA: "bg-ink-100 text-ink-600 border-ink-200",
 };
 
 export default function SuggerimentiDrivePage() {
@@ -104,54 +104,55 @@ export default function SuggerimentiDrivePage() {
 
   return (
     <div className="flex h-full flex-col p-6">
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-studio-900">Suggerimenti dalla scansione Drive</h1>
-        <p className="text-xs text-studio-500">
+      <div className="mb-6">
+        <span className="section-kicker" />
+        <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink-900">Suggerimenti dalla scansione Drive</h1>
+        <p className="mt-1 text-xs text-ink-500">
           Cartelle trovate nella scansione periodica della cartella &quot;cause pendenti&quot; che non sono state
           collegate in automatico. Nessuna causa viene mai creata da sola: qui si conferma o si ignora ogni proposta.
         </p>
       </div>
 
       {errore && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errore}</div>
+        <div className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errore}</div>
       )}
 
-      <div className="flex-1 overflow-auto rounded-lg border border-studio-200 bg-white">
+      <div className="flex-1 overflow-auto border border-ink-200 bg-white">
         {caricamento ? (
-          <div className="flex h-full items-center justify-center text-studio-400">Caricamento...</div>
+          <div className="flex h-full items-center justify-center text-ink-400">Caricamento...</div>
         ) : suggerimenti.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-studio-400">
+          <div className="flex h-full items-center justify-center text-ink-400">
             Nessun suggerimento in attesa. Tutte le cartelle scansionate sono già collegate o gestite.
           </div>
         ) : (
           <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-studio-100">
+            <thead className="sticky top-0 bg-ink-50">
               <tr>
-                <th className="border border-studio-200 px-3 py-2 text-left">Tipo</th>
-                <th className="border border-studio-200 px-3 py-2 text-left">Cartella</th>
-                <th className="border border-studio-200 px-3 py-2 text-left">Anno/RG</th>
-                <th className="border border-studio-200 px-3 py-2 text-left">Candidati</th>
-                <th className="border border-studio-200 px-3 py-2 text-left">Azioni</th>
+                <th className="border-b-2 border-ink-900 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ink-900">Tipo</th>
+                <th className="border-b-2 border-ink-900 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ink-900">Cartella</th>
+                <th className="border-b-2 border-ink-900 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ink-900">Anno/RG</th>
+                <th className="border-b-2 border-ink-900 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ink-900">Candidati</th>
+                <th className="border-b-2 border-ink-900 px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-ink-900">Azioni</th>
               </tr>
             </thead>
             <tbody>
               {suggerimenti.map((s) => (
                 <tr key={s.id}>
-                  <td className="border border-studio-200 px-3 py-2">
-                    <span className={`rounded border px-2 py-0.5 text-xs font-medium ${COLORE_TIPO[s.tipo]}`}>
+                  <td className="border-b border-ink-200 px-3 py-2">
+                    <span className={`border px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${COLORE_TIPO[s.tipo]}`}>
                       {ETICHETTA_TIPO[s.tipo]}
                     </span>
                   </td>
-                  <td className="border border-studio-200 px-3 py-2">
+                  <td className="border-b border-ink-200 px-3 py-2">
                     <div>{s.nomeCartella}</div>
                     {s.driveFolderUrl && (
-                      <a href={s.driveFolderUrl} target="_blank" rel="noreferrer" className="text-xs text-studio-700 underline">
+                      <a href={s.driveFolderUrl} target="_blank" rel="noreferrer" className="text-xs text-brand-600 underline">
                         Apri su Drive
                       </a>
                     )}
                   </td>
-                  <td className="border border-studio-200 px-3 py-2">{s.rg ? `${s.rg}/${s.anno}` : "-"}</td>
-                  <td className="border border-studio-200 px-3 py-2">
+                  <td className="border-b border-ink-200 px-3 py-2">{s.rg ? `${s.rg}/${s.anno}` : "-"}</td>
+                  <td className="border-b border-ink-200 px-3 py-2">
                     {s.causeCandidate && s.causeCandidate.length > 0 ? (
                       <ul className="space-y-1">
                         {s.causeCandidate.map((c) => (
@@ -161,7 +162,7 @@ export default function SuggerimentiDrivePage() {
                             </span>
                             <button
                               onClick={() => collega(s.id, c.causaId)}
-                              className="shrink-0 rounded border border-studio-300 px-2 py-0.5 text-xs text-studio-700 hover:bg-studio-50"
+                              className="shrink-0 border border-ink-300 px-2 py-0.5 text-xs uppercase tracking-wide text-ink-700 hover:bg-ink-50"
                             >
                               Collega
                             </button>
@@ -169,22 +170,22 @@ export default function SuggerimentiDrivePage() {
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-studio-400">-</span>
+                      <span className="text-ink-400">-</span>
                     )}
                   </td>
-                  <td className="border border-studio-200 px-3 py-2">
+                  <td className="border-b border-ink-200 px-3 py-2">
                     <div className="flex gap-2">
                       {s.tipo === "NUOVA_CAUSA" && (
                         <button
                           onClick={() => setSuggerimentoPerNuovaCausa(s)}
-                          className="rounded bg-studio-700 px-2 py-1 text-xs font-medium text-white hover:bg-studio-800"
+                          className="bg-brand-500 px-2 py-1 text-xs font-bold uppercase tracking-wide text-white hover:bg-brand-600"
                         >
                           Crea nuovo fascicolo
                         </button>
                       )}
                       <button
                         onClick={() => rifiuta(s.id)}
-                        className="rounded border border-studio-300 px-2 py-1 text-xs text-studio-700 hover:bg-studio-50"
+                        className="border border-ink-300 px-2 py-1 text-xs uppercase tracking-wide text-ink-700 hover:bg-ink-50"
                       >
                         Ignora
                       </button>

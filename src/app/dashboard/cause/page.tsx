@@ -68,7 +68,7 @@ export default function CausePage() {
         accessorKey: "driveFolderUrl",
         cell: ({ getValue }) =>
           getValue() ? (
-            <a href={getValue() as string} target="_blank" rel="noreferrer" className="text-studio-700 underline" onClick={(e) => e.stopPropagation()}>
+            <a href={getValue() as string} target="_blank" rel="noreferrer" className="text-brand-600 underline" onClick={(e) => e.stopPropagation()}>
               Apri
             </a>
           ) : (
@@ -138,28 +138,28 @@ export default function CausePage() {
 
   return (
     <div className="flex h-full flex-col p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-1 rounded-lg bg-studio-100 p-1">
+      <div className="mb-4 flex items-center justify-between border-b border-ink-200">
+        <div className="flex gap-6">
           {SCHEDE.map((s) => (
             <button
               key={s.valore}
               onClick={() => cambiaScheda(s.valore)}
               className={clsx(
-                "rounded-md px-4 py-1.5 text-sm font-medium transition",
-                stato === s.valore ? "bg-white text-studio-900 shadow-sm" : "text-studio-600 hover:text-studio-900"
+                "-mb-px border-b-2 px-1 py-3 text-sm font-bold uppercase tracking-wide transition",
+                stato === s.valore ? "border-brand-500 text-ink-900" : "border-transparent text-ink-500 hover:text-ink-800"
               )}
             >
               {s.etichetta}
             </button>
           ))}
         </div>
-        <button onClick={apriNuovo} className="rounded bg-studio-700 px-4 py-2 text-sm font-medium text-white hover:bg-studio-800">
+        <button onClick={apriNuovo} className="mb-2 bg-brand-500 px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-brand-600">
           + Nuovo fascicolo
         </button>
       </div>
 
       {avviso && (
-        <div className="mb-4 flex items-start justify-between gap-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="mt-4 flex items-start justify-between gap-4 border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           <span>{avviso}</span>
           <button onClick={() => setAvviso(null)} className="shrink-0 text-amber-700 hover:text-amber-900">
             ✕
@@ -167,9 +167,9 @@ export default function CausePage() {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden rounded-lg border border-studio-200 bg-white">
+      <div className="mt-4 flex-1 overflow-hidden border border-ink-200 bg-white">
         {caricamento ? (
-          <div className="flex h-full items-center justify-center text-studio-400">Caricamento...</div>
+          <div className="flex h-full items-center justify-center text-ink-400">Caricamento...</div>
         ) : (
           <DataGrid columns={columns} data={cause} onRowClick={apriModifica} filtroPlaceholder="Cerca per fascicolo, RG, ricorrente..." />
         )}

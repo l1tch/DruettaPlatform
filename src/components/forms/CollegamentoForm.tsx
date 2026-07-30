@@ -109,13 +109,13 @@ export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriInizi
   return (
     <>
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-        <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-          <h2 className="mb-4 text-lg font-semibold text-studio-900">
+        <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white p-6 shadow-xl">
+          <h2 className="mb-4 text-lg font-bold uppercase tracking-wide text-ink-900">
             {modalita === "crea" ? "Nuovo collegamento cliente-causa" : "Modifica collegamento"}
           </h2>
 
           {erroreServer && (
-            <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erroreServer}</div>
+            <div className="mb-4 border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erroreServer}</div>
           )}
 
           <form onSubmit={inviaForm} className="space-y-4">
@@ -142,22 +142,28 @@ export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriInizi
               <CampoData label="Data ultimo documento" name="ultimoDocumentoData" register={register} errors={errors} />
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-studio-100 pt-4">
+            <div className="mt-6 flex items-center justify-between border-t border-ink-100 pt-4">
               <div className="flex gap-2">
-                <button type="button" onClick={onChiudi} className="rounded border border-studio-300 px-4 py-2 text-sm text-studio-700 hover:bg-studio-50">
+                <button type="button" onClick={onChiudi} className="border border-ink-300 px-4 py-2 text-sm font-medium uppercase tracking-wide text-ink-700 hover:bg-ink-50">
                   Annulla
                 </button>
                 {modalita === "modifica" && onRichiediEliminazione && (
                   <button
                     type="button"
                     onClick={onRichiediEliminazione}
-                    className="rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="border border-brand-300 px-4 py-2 text-sm font-medium uppercase tracking-wide text-brand-600 hover:bg-brand-50"
                   >
                     Elimina
                   </button>
                 )}
               </div>
-              <button type="submit" disabled={isSubmitting} className="rounded bg-studio-700 px-4 py-2 text-sm font-medium text-white hover:bg-studio-800 disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-4 py-2 text-sm font-bold uppercase tracking-wide text-white disabled:opacity-50 ${
+                  modalita === "crea" ? "bg-brand-500 hover:bg-brand-600" : "bg-ink-900 hover:bg-black"
+                }`}
+              >
                 {modalita === "crea" ? "Crea collegamento" : "Salva modifiche"}
               </button>
             </div>

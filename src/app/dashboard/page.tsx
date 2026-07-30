@@ -31,28 +31,29 @@ export default async function DashboardPage() {
 
   return (
     <div className="h-full overflow-auto p-6">
-      <h1 className="mb-6 text-xl font-semibold text-studio-900">Panoramica studio</h1>
+      <span className="section-kicker" />
+      <h1 className="mb-6 text-2xl font-extrabold uppercase tracking-tight text-ink-900">Panoramica studio</h1>
 
       <div className="mb-8 grid grid-cols-4 gap-4">
         {schede.map((s) => (
-          <Link key={s.titolo} href={s.href} className="rounded-lg border border-studio-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-            <p className="text-sm text-studio-500">{s.titolo}</p>
-            <p className="mt-2 text-3xl font-semibold text-studio-900">{s.valore}</p>
+          <Link key={s.titolo} href={s.href} className="border border-ink-200 border-t-4 border-t-brand-500 bg-white p-5 transition hover:border-ink-400">
+            <p className="text-xs font-bold uppercase tracking-wide text-ink-500">{s.titolo}</p>
+            <p className="mt-2 text-3xl font-extrabold text-ink-900">{s.valore}</p>
           </Link>
         ))}
       </div>
 
-      <div className="rounded-lg border border-studio-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-studio-800">Udienze nei prossimi 7 giorni</h2>
+      <div className="border border-ink-200 bg-white p-5">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-ink-800">Udienze nei prossimi 7 giorni</h2>
         {prossimeUdienze.length === 0 ? (
-          <p className="text-sm text-studio-400">Nessuna udienza in programma.</p>
+          <p className="text-sm text-ink-400">Nessuna udienza in programma.</p>
         ) : (
-          <ul className="divide-y divide-studio-100">
+          <ul className="divide-y divide-ink-100">
             {prossimeUdienze.map((c) => (
               <li key={c.id} className="flex items-center justify-between py-2 text-sm">
-                <span className="font-medium text-studio-800">{c.fascicolo}</span>
-                <span className="text-studio-500">{c.tribunale}</span>
-                <span className="text-studio-600">
+                <span className="font-medium text-ink-800">{c.fascicolo}</span>
+                <span className="text-ink-500">{c.tribunale}</span>
+                <span className="text-ink-600">
                   {c.dataUdienza?.toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" })}
                 </span>
               </li>

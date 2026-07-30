@@ -108,16 +108,19 @@ export default function ClientiPage() {
 
   return (
     <div className="flex h-full flex-col p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-studio-900">Clienti</h1>
-        <button onClick={apriNuovo} className="rounded bg-studio-700 px-4 py-2 text-sm font-medium text-white hover:bg-studio-800">
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <span className="section-kicker" />
+          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink-900">Clienti</h1>
+        </div>
+        <button onClick={apriNuovo} className="bg-brand-500 px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-brand-600">
           + Nuovo cliente
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden rounded-lg border border-studio-200 bg-white">
+      <div className="flex-1 overflow-hidden border border-ink-200 bg-white">
         {caricamento ? (
-          <div className="flex h-full items-center justify-center text-studio-400">Caricamento...</div>
+          <div className="flex h-full items-center justify-center text-ink-400">Caricamento...</div>
         ) : (
           <DataGrid columns={columns} data={clienti} onRowClick={apriModifica} filtroPlaceholder="Cerca per cognome, nome, email..." />
         )}

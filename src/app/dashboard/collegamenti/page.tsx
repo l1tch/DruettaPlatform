@@ -64,7 +64,7 @@ export default function CollegamentiPage() {
         accessorKey: "ultimoDocumentoUrl",
         cell: ({ getValue }) =>
           getValue() ? (
-            <a href={getValue() as string} target="_blank" rel="noreferrer" className="text-studio-700 underline" onClick={(e) => e.stopPropagation()}>
+            <a href={getValue() as string} target="_blank" rel="noreferrer" className="text-brand-600 underline" onClick={(e) => e.stopPropagation()}>
               Apri
             </a>
           ) : (
@@ -124,19 +124,20 @@ export default function CollegamentiPage() {
 
   return (
     <div className="flex h-full flex-col p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-6 flex items-end justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-studio-900">Collegamenti clienti / cause</h1>
-          <p className="text-xs text-studio-500">Raccorda ogni cliente al fascicolo (RG) e all&apos;ultimo documento Drive (verbali ecc.)</p>
+          <span className="section-kicker" />
+          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-ink-900">Collegamenti clienti / cause</h1>
+          <p className="mt-1 text-xs text-ink-500">Raccorda ogni cliente al fascicolo (RG) e all&apos;ultimo documento Drive (verbali ecc.)</p>
         </div>
-        <button onClick={apriNuovo} className="rounded bg-studio-700 px-4 py-2 text-sm font-medium text-white hover:bg-studio-800">
+        <button onClick={apriNuovo} className="bg-brand-500 px-4 py-2 text-sm font-bold uppercase tracking-wide text-white hover:bg-brand-600">
           + Nuovo collegamento
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden rounded-lg border border-studio-200 bg-white">
+      <div className="flex-1 overflow-hidden border border-ink-200 bg-white">
         {caricamento ? (
-          <div className="flex h-full items-center justify-center text-studio-400">Caricamento...</div>
+          <div className="flex h-full items-center justify-center text-ink-400">Caricamento...</div>
         ) : (
           <DataGrid columns={columns} data={collegamenti} onRowClick={apriModifica} filtroPlaceholder="Cerca per cliente, fascicolo, RG..." />
         )}

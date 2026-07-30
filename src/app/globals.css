@@ -12,6 +12,23 @@ body {
 }
 
 body {
-  background-color: #f4f6f8;
-  color: #1c2330;
+  background-color: #fafafa;
+  color: #141414;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Small dash accent used above section titles across the app, echoing the
+   lacomune.eu section header treatment. */
+.section-kicker {
+  display: block;
+  width: 2rem;
+  height: 2px;
+  background-color: #141414;
+  margin-bottom: 0.75rem;
 }

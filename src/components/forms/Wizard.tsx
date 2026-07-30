@@ -24,20 +24,20 @@ export function WizardProgress({ step, steps }: WizardProps) {
         <li key={s.titolo} className="flex flex-1 items-center gap-2">
           <div
             className={clsx(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
               idx === step
-                ? "bg-studio-700 text-white"
+                ? "bg-brand-500 text-white"
                 : idx < step
-                ? "bg-studio-300 text-studio-800"
-                : "bg-studio-100 text-studio-500"
+                ? "bg-ink-300 text-ink-800"
+                : "bg-ink-100 text-ink-500"
             )}
           >
             {idx + 1}
           </div>
-          <span className={clsx("text-xs", idx === step ? "font-semibold text-studio-800" : "text-studio-500")}>
+          <span className={clsx("text-xs uppercase tracking-wide", idx === step ? "font-bold text-ink-900" : "text-ink-500")}>
             {s.titolo}
           </span>
-          {idx < steps.length - 1 && <div className="h-px flex-1 bg-studio-200" />}
+          {idx < steps.length - 1 && <div className="h-px flex-1 bg-ink-200" />}
         </li>
       ))}
     </ol>

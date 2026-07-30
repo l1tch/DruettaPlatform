@@ -25,17 +25,20 @@ export function Nav({ nome, ruolo }: { nome: string; ruolo: Role }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-14 items-center justify-between border-b border-studio-200 bg-white px-6">
+    <nav className="flex h-14 items-center justify-between bg-brand-500 px-6">
       <div className="flex items-center gap-6">
-        <span className="text-sm font-semibold text-studio-900">Studio Legale</span>
+        <span className="text-lg tracking-tight text-white">
+          <span className="font-normal">la</span>
+          <span className="font-extrabold">comune</span>
+        </span>
         <div className="flex gap-1">
           {VOCI.map((v) => (
             <Link
               key={v.href}
               href={v.href}
               className={clsx(
-                "rounded px-3 py-1.5 text-sm font-medium transition",
-                pathname === v.href ? "bg-studio-100 text-studio-900" : "text-studio-600 hover:bg-studio-50"
+                "px-3 py-1.5 text-sm font-medium uppercase tracking-wide transition",
+                pathname === v.href ? "bg-white text-brand-600" : "text-white hover:bg-brand-600"
               )}
             >
               {v.etichetta}
@@ -45,8 +48,8 @@ export function Nav({ nome, ruolo }: { nome: string; ruolo: Role }) {
             <Link
               href="/dashboard/utenti"
               className={clsx(
-                "rounded px-3 py-1.5 text-sm font-medium transition",
-                pathname === "/dashboard/utenti" ? "bg-studio-100 text-studio-900" : "text-studio-600 hover:bg-studio-50"
+                "px-3 py-1.5 text-sm font-medium uppercase tracking-wide transition",
+                pathname === "/dashboard/utenti" ? "bg-white text-brand-600" : "text-white hover:bg-brand-600"
               )}
             >
               Utenti
@@ -55,12 +58,12 @@ export function Nav({ nome, ruolo }: { nome: string; ruolo: Role }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-studio-500">
+        <span className="text-xs text-white/90">
           {nome} · {ETICHETTA_RUOLO[ruolo]}
         </span>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="rounded border border-studio-300 px-3 py-1.5 text-xs font-medium text-studio-700 hover:bg-studio-50"
+          className="border border-white/70 px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-white hover:bg-white hover:text-brand-600"
         >
           Esci
         </button>
