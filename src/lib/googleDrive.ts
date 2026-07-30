@@ -17,30 +17,80 @@ export interface FileDrive {
   modificatoIl?: string | null;
 }
 
-// Crea (se non esiste) la sottocartella Drive dedicata a un fascicolo, dentro
-// la cartella radice dello studio.
-export async function creaCartellaFascicolo(userId: string, nomeFascicolo: string): Promise<string> {
-  const drive = await driveClient(userId);
-  const rootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-  if (!rootId) throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID non configurato.");
+const MIME_CARTELLA = "application/vnd.google-apps.folder";
 
-  const esistente = await drive.files.list({
-    q: `'${rootId}' in parents and name = '${nomeFascicolo.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-    fields: "files(id, name)",
-  });
-  if (esistente.data.files && esistente.data.files.length > 0) {
-    return esistente.data.files[0].id!;
+// Estrae l'ID di un file/cartella da un link Google Drive. Accetta anche un
+// ID "nudo" (senza URL), cosi' i campi possono essere popolati sia con un
+// link completo sia con il solo ID.
+export function estraiIdDaLinkDrive(linkOId: string): string {
+  const valore = linkOId.trim();
+
+  const pattern = [/\/folders\/([a-zA-Z0-9_-]+)/, /\/d\/([a-zA-Z0-9_-]+)/, /[?&]id=([a-zA-Z0-9_-]+)/];
+  for (const p of pattern) {
+    const match = valore.match(p);
+    if (match) return match[1];
   }
 
-  const cartella = await drive.files.create({
-    requestBody: {
-      name: nomeFascicolo,
-      mimeType: "application/vnd.google-apps.folder",
-      parents: [rootId],
-    },
-    fields: "id",
-  });
-  return cartella.data.id!;
+  if (!valore.includes("/") && !valore.includes("http")) {
+    return valore; // già un ID
+  }
+
+  throw new Error(`Impossibile riconoscere un ID Drive valido nel link: "${linkOId}"`);
+}
+
+interface ElementoDrive {
+  id: string;
+  nome: string;
+  mimeType: string;
+  webViewLink?: string | null;
+  isCartella: boolean;
+}
+
+// Le cartelle/i documenti su Drive NON vengono mai creati automaticamente da
+// questa piattaforma: devono già esistere e vengono collegati incollando il
+// link Drive nel form. Questa funzione verifica che l'elemento indicato
+// esista davvero, sia accessibile con l'account Google connesso e non sia
+// nel cestino, restituendo un errore parlante altrimenti.
+export async function verificaElementoDrive(
+  userId: string,
+  linkOId: string,
+  tipoAtteso?: "cartella" | "file"
+): Promise<ElementoDrive> {
+  const id = estraiIdDaLinkDrive(linkOId);
+  const drive = await driveClient(userId);
+
+  let res;
+  try {
+    res = await drive.files.get({
+      fileId: id,
+      fields: "id, name, mimeType, webViewLink, trashed",
+    });
+  } catch (e: any) {
+    if (e?.code === 404 || e?.response?.status === 404) {
+      throw new Error("L'elemento Drive indicato non è stato trovato: verificare il link o i permessi di accesso.");
+    }
+    throw new Error("Impossibile verificare l'elemento su Drive: " + (e?.message ?? "errore sconosciuto"));
+  }
+
+  if (res.data.trashed) {
+    throw new Error(`L'elemento "${res.data.name}" è presente nel cestino di Drive.`);
+  }
+
+  const isCartella = res.data.mimeType === MIME_CARTELLA;
+  if (tipoAtteso === "cartella" && !isCartella) {
+    throw new Error(`Il link indicato punta a un file ("${res.data.name}"), non a una cartella.`);
+  }
+  if (tipoAtteso === "file" && isCartella) {
+    throw new Error(`Il link indicato punta a una cartella ("${res.data.name}"), non a un file.`);
+  }
+
+  return {
+    id: res.data.id!,
+    nome: res.data.name!,
+    mimeType: res.data.mimeType!,
+    webViewLink: res.data.webViewLink,
+    isCartella,
+  };
 }
 
 export async function elencaFileCartella(userId: string, folderId: string): Promise<FileDrive[]> {

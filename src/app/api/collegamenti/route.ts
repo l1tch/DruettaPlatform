@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { collegamentoSchema } from "@/lib/validazione";
 import { utenteAutorizzato, gestisciErrore } from "@/lib/apiHelpers";
 import { registraAudit } from "@/lib/audit";
+import { risolviDocumentoDrive } from "@/lib/driveDocumento";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const dati = collegamentoSchema.parse(body);
+    const documento = await risolviDocumentoDrive(auth.utente!.id, dati.ultimoDocumentoUrl);
+
     const collegamento = await prisma.clienteCausa.create({
-      data: dati,
+      data: { ...dati, ultimoDocumentoDriveId: documento.driveId, ultimoDocumentoUrl: documento.url },
       include: { cliente: true, causa: true },
     });
 

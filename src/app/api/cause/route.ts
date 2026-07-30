@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { causaSchema } from "@/lib/validazione";
 import { utenteAutorizzato, gestisciErrore } from "@/lib/apiHelpers";
 import { registraAudit } from "@/lib/audit";
+import { risolviCartellaDriveCausa } from "@/lib/driveCausa";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const dati = causaSchema.parse(body);
-    const causa = await prisma.causa.create({ data: dati });
+
+    const cartella = await risolviCartellaDriveCausa(auth.utente!.id, dati.driveFolderUrl, dati);
+
+    const causa = await prisma.causa.create({
+      data: { ...dati, driveFolderId: cartella.driveFolderId, driveFolderUrl: cartella.driveFolderUrl },
+    });
     await registraAudit({
       azione: "CREAZIONE",
       entita: "Causa",
@@ -35,7 +41,7 @@ export async function POST(req: NextRequest) {
       dopo: causa,
       causaId: causa.id,
     });
-    return NextResponse.json(causa, { status: 201 });
+    return NextResponse.json({ ...causa, avviso: cartella.avviso }, { status: 201 });
   } catch (e) {
     return gestisciErrore(e);
   }

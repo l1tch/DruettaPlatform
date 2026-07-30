@@ -23,14 +23,38 @@ Google (Gmail e Drive).
   ordinamento per colonna e ricerca, in stile Excel. L'inserimento avviene con
   un **form guidato a passaggi**; la modifica di un record esistente richiede
   sempre una **conferma tramite modale** prima di salvare.
-- **Google Drive**: ogni fascicolo ha una sottocartella dedicata (creata
-  automaticamente sotto una cartella radice dello studio); da cause è
-  possibile elencare, caricare e aggiornare i documenti.
+- **Google Drive**: la piattaforma **non crea mai** cartelle o file su Drive.
+  Le cartelle dei fascicoli sono create a mano dallo studio seguendo una
+  convenzione di nomenclatura (vedi sotto) e vengono collegate incollandone il
+  link nel form del fascicolo; la piattaforma verifica solo che l'elemento
+  collegato esista davvero, sia accessibile e non sia nel cestino. Una volta
+  collegata la cartella, da un fascicolo è possibile elencare, caricare e
+  aggiornare i documenti al suo interno.
 - **Email automatiche**: promemoria per udienze e termini in scadenza nelle
   successive 48 ore, inviati tramite Gmail; ogni invio (manuale o automatico)
   è tracciato in un log.
 - **Audit trail**: ogni creazione, modifica ed eliminazione su cause, clienti
   e collegamenti viene registrata con utente, data/ora e valori prima/dopo.
+
+## Convenzione di nomenclatura delle cartelle Drive
+
+Le cartelle dei fascicoli (create a mano su Drive, mai dalla piattaforma)
+seguono la convenzione:
+
+```
+anno_rg_parte[+...]_controparte[+...]_tribunale
+```
+
+Esempio: `2025_8271_IBHAROGA_DELIVEROO_TRIB TORINO`
+
+Le parti tra `[...]` sono opzionali (più ricorrenti/controparti si concatenano
+con `+`). Quando si collega una cartella a un fascicolo (incollandone il link
+nel form), la piattaforma confronta il nome reale della cartella con quello
+atteso in base ai dati del fascicolo (R.G. nel formato `numero/anno`,
+ricorrenti, controparte, tribunale) e mostra un **avviso non bloccante** se
+non corrispondono, per aiutare a individuare link collegati alla cartella
+sbagliata. Il salvataggio non viene comunque impedito: la piattaforma verifica
+solo l'esistenza della cartella, non il rispetto della convenzione.
 
 ## Sicurezza dei dati
 
@@ -87,10 +111,12 @@ Requisiti minimi per il trattamento di dati personali e giudiziari (GDPR):
    redirect URI `http://localhost:3000/api/auth/callback/google` (in
    produzione: `https://<dominio>/api/auth/callback/google`).
 3. Copiare Client ID/Secret in `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
-4. Creare in Google Drive una cartella radice per i fascicoli dello studio e
-   copiarne l'ID in `GOOGLE_DRIVE_ROOT_FOLDER_ID`.
-5. Impostare `ALLOWED_EMAIL_DOMAINS` con il dominio email dello studio, così
+4. Impostare `ALLOWED_EMAIL_DOMAINS` con il dominio email dello studio, così
    solo gli account autorizzati possono accedere.
+
+Non serve configurare alcuna cartella radice: le cartelle dei fascicoli
+esistono già su Drive (create a mano dallo studio) e vengono collegate di
+volta in volta incollando il link nel form del fascicolo.
 
 ## Variabili d'ambiente
 
@@ -103,7 +129,6 @@ Vedere `.env.example` per l'elenco completo con descrizione. In sintesi:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth Google (login, Drive, Gmail) |
 | `ALLOWED_EMAIL_DOMAINS` | Domini email autorizzati ad accedere |
 | `INITIAL_ADMIN_EMAIL` | Email che riceve il ruolo ADMIN al primo accesso |
-| `GOOGLE_DRIVE_ROOT_FOLDER_ID` | Cartella Drive radice dei fascicoli |
 | `FIELD_ENCRYPTION_KEY` | Chiave AES-256 per la cifratura dei campi sensibili |
 | `CRON_SECRET` | Token per l'endpoint dei promemoria automatici |
 

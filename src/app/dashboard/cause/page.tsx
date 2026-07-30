@@ -41,6 +41,7 @@ export default function CausePage() {
   const [formAperto, setFormAperto] = useState(false);
   const [causaSelezionata, setCausaSelezionata] = useState<Causa | null>(null);
   const [eliminaAperto, setEliminaAperto] = useState(false);
+  const [avviso, setAvviso] = useState<string | null>(null);
 
   const caricaDati = useCallback(async (s: StatoCausa) => {
     setCaricamento(true);
@@ -102,19 +103,24 @@ export default function CausePage() {
   };
 
   const salvaCausa = async (dati: CausaInput) => {
-    if (causaSelezionata) {
-      await fetch(`/api/cause/${causaSelezionata.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
-    } else {
-      await fetch("/api/cause", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
+    const res = causaSelezionata
+      ? await fetch(`/api/cause/${causaSelezionata.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        })
+      : await fetch("/api/cause", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        });
+
+    const risposta = await res.json();
+    if (!res.ok) {
+      throw new Error(risposta.errore ?? "Errore durante il salvataggio del fascicolo");
     }
+
+    setAvviso(risposta.avviso ?? null);
     setFormAperto(false);
     setCausaSelezionata(null);
     await caricaDati(stato);
@@ -151,6 +157,15 @@ export default function CausePage() {
           + Nuovo fascicolo
         </button>
       </div>
+
+      {avviso && (
+        <div className="mb-4 flex items-start justify-between gap-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          <span>{avviso}</span>
+          <button onClick={() => setAvviso(null)} className="shrink-0 text-amber-700 hover:text-amber-900">
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden rounded-lg border border-studio-200 bg-white">
         {caricamento ? (

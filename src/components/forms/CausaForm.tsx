@@ -54,15 +54,28 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
   const steps = [
     {
       titolo: "Dati generali",
-      campi: ["stato", "fascicolo", "tribunale", "rg", "ricorrenti", "controparte"],
+      campi: ["stato", "fascicolo", "tribunale", "rg", "ricorrenti", "controparte", "driveFolderUrl"],
       contenuto: (
         <div className="grid grid-cols-2 gap-4">
           <CampoSelezione label="Stato" name="stato" register={register} errors={errors} opzioni={STATO_OPZIONI} required />
           <CampoTesto label="Fascicolo" name="fascicolo" register={register} errors={errors} required />
           <CampoTesto label="Tribunale" name="tribunale" register={register} errors={errors} />
-          <CampoTesto label="R.G." name="rg" register={register} errors={errors} />
+          <CampoTesto label="R.G." name="rg" register={register} errors={errors} placeholder="es. 8271/2025" />
           <CampoTesto label="Nomi ricorrenti" name="ricorrenti" register={register} errors={errors} />
           <CampoTesto label="Controparte" name="controparte" register={register} errors={errors} />
+          <div className="col-span-2">
+            <CampoTesto
+              label="Link cartella Drive"
+              name="driveFolderUrl"
+              register={register}
+              errors={errors}
+              placeholder="https://drive.google.com/drive/folders/..."
+            />
+            <p className="mt-1 text-xs text-studio-400">
+              La cartella deve già esistere su Drive (creata a mano seguendo la convenzione
+              anno_rg_parte_controparte_tribunale): qui va solo incollato il link, non viene creata nulla.
+            </p>
+          </div>
         </div>
       ),
     },
@@ -98,21 +111,41 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
   const wizard = useWizard(steps.length);
   const [confermaAperta, setConfermaAperta] = useState(false);
   const [datiPendenti, setDatiPendenti] = useState<CausaInput | null>(null);
+  const [erroreServer, setErroreServer] = useState<string | null>(null);
+  const [salvataggioInCorso, setSalvataggioInCorso] = useState(false);
 
   if (!aperto) return null;
 
   const inviaForm = handleSubmit(async (dati) => {
+    setErroreServer(null);
     if (modalita === "modifica") {
       setDatiPendenti(dati);
       setConfermaAperta(true);
     } else {
-      await onSalva(dati);
+      try {
+        setSalvataggioInCorso(true);
+        await onSalva(dati);
+      } catch (e) {
+        setErroreServer(e instanceof Error ? e.message : "Errore durante il salvataggio");
+      } finally {
+        setSalvataggioInCorso(false);
+      }
     }
   });
 
   const confermaSalvataggio = async () => {
-    if (datiPendenti) await onSalva(datiPendenti);
-    setConfermaAperta(false);
+    if (!datiPendenti) return;
+    try {
+      setSalvataggioInCorso(true);
+      setErroreServer(null);
+      await onSalva(datiPendenti);
+      setConfermaAperta(false);
+    } catch (e) {
+      setErroreServer(e instanceof Error ? e.message : "Errore durante il salvataggio");
+      setConfermaAperta(false);
+    } finally {
+      setSalvataggioInCorso(false);
+    }
   };
 
   const passoAvanti = async () => {
@@ -129,6 +162,10 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
           </h2>
 
           {modalita === "crea" && <WizardProgress step={wizard.step} steps={steps} />}
+
+          {erroreServer && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erroreServer}</div>
+          )}
 
           <form onSubmit={inviaForm} className="space-y-4">
             {modalita === "crea" ? steps[wizard.step].contenuto : steps.map((s) => <div key={s.titolo}>{s.contenuto}</div>)}
@@ -180,6 +217,7 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
         aperto={confermaAperta}
         titolo="Conferma modifica fascicolo"
         messaggio={`Confermi di voler salvare le modifiche al fascicolo "${datiPendenti?.fascicolo ?? ""}"?`}
+        inCorso={salvataggioInCorso}
         onConferma={confermaSalvataggio}
         onAnnulla={() => setConfermaAperta(false)}
       />

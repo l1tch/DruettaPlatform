@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { collegamentoSchema } from "@/lib/validazione";
 import { utenteAutorizzato, gestisciErrore } from "@/lib/apiHelpers";
 import { registraAudit } from "@/lib/audit";
+import { risolviDocumentoDrive } from "@/lib/driveDocumento";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +18,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const prima = await prisma.clienteCausa.findUnique({ where: { id: params.id } });
     if (!prima) return NextResponse.json({ errore: "Collegamento non trovato" }, { status: 404 });
 
+    const datiAggiornati: typeof dati = { ...dati };
+    if (dati.ultimoDocumentoUrl !== undefined) {
+      const documento = await risolviDocumentoDrive(auth.utente!.id, dati.ultimoDocumentoUrl);
+      datiAggiornati.ultimoDocumentoDriveId = documento.driveId;
+      datiAggiornati.ultimoDocumentoUrl = documento.url;
+    }
+
     const dopo = await prisma.clienteCausa.update({
       where: { id: params.id },
-      data: dati,
+      data: datiAggiornati,
       include: { cliente: true, causa: true },
     });
 

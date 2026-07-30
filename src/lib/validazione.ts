@@ -8,7 +8,9 @@ const dataOpzionale = z
 export const causaSchema = z.object({
   stato: z.enum(["PENDENTI", "CONCLUSE", "ESECUZIONI"]),
   fascicolo: z.string().min(1, "Il numero di fascicolo è obbligatorio"),
-  driveFolderId: z.string().nullish(),
+  // Link alla cartella Drive già esistente (creata a mano dallo studio
+  // seguendo la convenzione di nomenclatura). L'ID viene risolto e
+  // verificato lato server: la piattaforma non crea mai cartelle su Drive.
   driveFolderUrl: z.string().nullish(),
   tribunale: z.string().nullish(),
   rg: z.string().nullish(),

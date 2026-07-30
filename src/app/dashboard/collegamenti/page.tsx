@@ -90,19 +90,23 @@ export default function CollegamentiPage() {
   };
 
   const salva = async (dati: CollegamentoInput) => {
-    if (selezionato) {
-      await fetch(`/api/collegamenti/${selezionato.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
-    } else {
-      await fetch("/api/collegamenti", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
+    const res = selezionato
+      ? await fetch(`/api/collegamenti/${selezionato.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        })
+      : await fetch("/api/collegamenti", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        });
+
+    if (!res.ok) {
+      const risposta = await res.json();
+      throw new Error(risposta.errore ?? "Errore durante il salvataggio del collegamento");
     }
+
     setFormAperto(false);
     setSelezionato(null);
     await caricaDati();

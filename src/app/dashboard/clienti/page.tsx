@@ -74,19 +74,23 @@ export default function ClientiPage() {
   };
 
   const salvaCliente = async (dati: ClienteInput) => {
-    if (clienteSelezionato) {
-      await fetch(`/api/clienti/${clienteSelezionato.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
-    } else {
-      await fetch("/api/clienti", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dati),
-      });
+    const res = clienteSelezionato
+      ? await fetch(`/api/clienti/${clienteSelezionato.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        })
+      : await fetch("/api/clienti", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dati),
+        });
+
+    if (!res.ok) {
+      const risposta = await res.json();
+      throw new Error(risposta.errore ?? "Errore durante il salvataggio del cliente");
     }
+
     setFormAperto(false);
     setClienteSelezionato(null);
     await caricaDati();

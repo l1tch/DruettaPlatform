@@ -49,21 +49,41 @@ export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriInizi
 
   const [confermaAperta, setConfermaAperta] = useState(false);
   const [datiPendenti, setDatiPendenti] = useState<CollegamentoInput | null>(null);
+  const [erroreServer, setErroreServer] = useState<string | null>(null);
+  const [salvataggioInCorso, setSalvataggioInCorso] = useState(false);
 
   if (!aperto) return null;
 
   const inviaForm = handleSubmit(async (dati) => {
+    setErroreServer(null);
     if (modalita === "modifica") {
       setDatiPendenti(dati);
       setConfermaAperta(true);
     } else {
-      await onSalva(dati);
+      try {
+        setSalvataggioInCorso(true);
+        await onSalva(dati);
+      } catch (e) {
+        setErroreServer(e instanceof Error ? e.message : "Errore durante il salvataggio");
+      } finally {
+        setSalvataggioInCorso(false);
+      }
     }
   });
 
   const confermaSalvataggio = async () => {
-    if (datiPendenti) await onSalva(datiPendenti);
-    setConfermaAperta(false);
+    if (!datiPendenti) return;
+    try {
+      setSalvataggioInCorso(true);
+      setErroreServer(null);
+      await onSalva(datiPendenti);
+      setConfermaAperta(false);
+    } catch (e) {
+      setErroreServer(e instanceof Error ? e.message : "Errore durante il salvataggio");
+      setConfermaAperta(false);
+    } finally {
+      setSalvataggioInCorso(false);
+    }
   };
 
   return (
@@ -73,6 +93,10 @@ export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriInizi
           <h2 className="mb-4 text-lg font-semibold text-studio-900">
             {modalita === "crea" ? "Nuovo collegamento cliente-causa" : "Modifica collegamento"}
           </h2>
+
+          {erroreServer && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erroreServer}</div>
+          )}
 
           <form onSubmit={inviaForm} className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
@@ -124,6 +148,7 @@ export function CollegamentoForm({ aperto, modalita, clienti, cause, valoriInizi
       <ConfirmModal
         aperto={confermaAperta}
         titolo="Conferma modifica collegamento"
+        inCorso={salvataggioInCorso}
         onConferma={confermaSalvataggio}
         onAnnulla={() => setConfermaAperta(false)}
       />
