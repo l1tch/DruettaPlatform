@@ -3,7 +3,7 @@ import { AuditAzione } from "@prisma/client";
 
 interface RegistraAuditParams {
   azione: AuditAzione;
-  entita: "Causa" | "Cliente" | "ClienteCausa" | "DocumentoDrive" | "Utente";
+  entita: "Causa" | "Cliente" | "ClienteCausa" | "DocumentoDrive" | "Utente" | "Pratica";
   entitaId?: string;
   utenteId?: string | null;
   prima?: unknown;

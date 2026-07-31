@@ -347,3 +347,113 @@ model AuditLog {
   @@index([entita, entitaId])
   @@index([utenteId])
 }
+
+// ---------------------------------------------------------------------------
+// Pratiche (licenziamenti e cause singole): entità separata dalla Causa
+// (contenzioso vero e proprio in tribunale, con Tribunale/R.G./udienze). I
+// campi qui riflettono il tracciamento pre/post contenzioso usato dallo
+// studio: scadenze di impugnativa, invio della lettera di licenziamento,
+// procura, e - una volta ottenuta una sentenza/accordo - il recupero del
+// credito (esecuzione, pagamenti).
+// ---------------------------------------------------------------------------
+
+enum StatoPratica {
+  PENDENTI
+  CONCLUSE
+  IN_ESECUZIONE
+  DA_PAGARE
+  DIMESSI_ESCLUSI
+}
+
+// Derivata dal testo libero di "tipologia" per poter filtrare la vista
+// unica con le pills Raiders / Cause singole: non è un dato immesso a mano,
+// va sempre ricalcolata quando cambia la tipologia (vedi src/lib/pratiche.ts).
+enum CategoriaPratica {
+  RAIDER
+  CAUSA_SINGOLA
+  DA_CLASSIFICARE
+}
+
+model Pratica {
+  id       String           @id @default(cuid())
+  stato    StatoPratica      @default(PENDENTI)
+  categoria CategoriaPratica @default(DA_CLASSIFICARE)
+  tipologia String?          // testo originale (es. "Licenziamento", "Causa singola", "Sospensione account")
+
+  driveFolderId  String? @unique
+  driveFolderUrl String?
+
+  rg     String? // formato non uniforme nella fonte reale: testo libero, non validato con regex
+  citta  String?
+  nome    String?
+  cognome String?
+  // Campo cifrato (stesso schema di Cliente.codiceFiscaleCifrato): nei dati
+  // reali questa colonna contiene un blob non strutturato (data/luogo di
+  // nascita, residenza, codice fiscale insieme), cifrato per intero.
+  datiAnagraficiCifrato String? @db.Text
+
+  controparte  String?
+  appuntamenti String? @db.Text
+  note         String? @db.Text
+  email        String?
+  telefono     String?
+
+  scadenza           DateTime?
+  impugnativa        DateTime?
+  dataLicenziamento  DateTime?
+  cartaceo           Boolean   @default(false)
+  procura            Boolean   @default(false)
+  // Testo libero: nella fonte reale mescola note e date (es. "nota n. 11 9/4/2026")
+  emissioneFatturaSpeseLegali String?
+  pagatoCapitale              Boolean @default(false)
+  pagatoSpeseLegali           Boolean @default(false)
+  precetto                    String? @db.Text
+  esecuzione                  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conflittiImport ImportPraticaConflitto[]
+
+  @@index([stato])
+  @@index([categoria])
+}
+
+enum StatoConflittoImportPratica {
+  IN_ATTESA
+  TENUTO_VALORE_ATTUALE
+  APPLICATO_VALORE_EXCEL
+}
+
+model ImportPraticaConflitto {
+  id            String                      @id @default(cuid())
+  importLogId   String
+  praticaId     String
+  campo         String
+  valoreAttuale String?
+  valoreExcel   String?
+  rigaExcel     Int
+  stato         StatoConflittoImportPratica @default(IN_ATTESA)
+  createdAt     DateTime                    @default(now())
+
+  importLog ImportPraticaLog @relation(fields: [importLogId], references: [id], onDelete: Cascade)
+  pratica   Pratica          @relation(fields: [praticaId], references: [id], onDelete: Cascade)
+
+  @@index([stato])
+  @@index([praticaId])
+}
+
+model ImportPraticaLog {
+  id               String   @id @default(cuid())
+  eseguitoIl       DateTime @default(now())
+  eseguitoDaId     String?
+  righeTotali      Int
+  righeCreate      Int
+  righeAggiornate  Int
+  righeInvariate   Int
+  righeConflitto   Int
+  righeScartate    Int
+  dettagliScartate Json?
+
+  conflitti ImportPraticaConflitto[]
+}
