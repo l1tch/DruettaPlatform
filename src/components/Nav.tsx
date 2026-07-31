@@ -12,6 +12,7 @@ const VOCI = [
   { href: "/dashboard/clienti", etichetta: "Clienti" },
   { href: "/dashboard/collegamenti", etichetta: "Collegamenti" },
   { href: "/dashboard/suggerimenti-drive", etichetta: "Suggerimenti Drive" },
+  { href: "/dashboard/import-excel", etichetta: "Import Excel" },
 ];
 
 const ETICHETTA_RUOLO: Record<Role, string> = {

@@ -39,6 +39,7 @@ function calcolaValoriForm(valoriIniziali: Partial<CausaInput> | undefined, stat
     propostaTrasmessa: false,
     procure185: false,
     ...valoriIniziali,
+    ultimaUdienza: toInputDate(valoriIniziali?.ultimaUdienza as any) as any,
     dataUdienza: toInputDate(valoriIniziali?.dataUdienza as any) as any,
     termine: toInputDate(valoriIniziali?.termine as any) as any,
     dataProposta: toInputDate(valoriIniziali?.dataProposta as any) as any,
@@ -101,8 +102,8 @@ export function CausaForm({ aperto, modalita, valoriIniziali, statoPredefinito, 
       campi: ["ultimaUdienza", "dataUdienza", "adempimenti", "termine"],
       contenuto: (
         <div className="grid grid-cols-2 gap-4">
-          <CampoTesto label="Ultima udienza" name="ultimaUdienza" register={register} errors={errors} />
-          <CampoData label="Data udienza" name="dataUdienza" register={register} errors={errors} />
+          <CampoData label="Data ultima udienza" name="ultimaUdienza" register={register} errors={errors} />
+          <CampoData label="Data prossima udienza" name="dataUdienza" register={register} errors={errors} />
           <CampoTesto label="Adempimenti" name="adempimenti" register={register} errors={errors} textarea />
           <CampoData label="Termine" name="termine" register={register} errors={errors} />
         </div>

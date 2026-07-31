@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const dataOpzionale = z
+export const dataOpzionale = z
   .union([z.string(), z.date(), z.null()])
   .optional()
   .transform((v) => (v ? new Date(v) : null));
@@ -16,7 +16,7 @@ export const causaSchema = z.object({
   rg: z.string().nullish(),
   ricorrenti: z.string().nullish(),
   controparte: z.string().nullish(),
-  ultimaUdienza: z.string().nullish(),
+  ultimaUdienza: dataOpzionale,
   dataUdienza: dataOpzionale,
   adempimenti: z.string().nullish(),
   termine: dataOpzionale,

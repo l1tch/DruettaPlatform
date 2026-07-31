@@ -79,7 +79,7 @@ export default function CausePage() {
       { header: "RG", accessorKey: "rg" },
       { header: "Nomi ricorrenti", accessorKey: "ricorrenti" },
       { header: "Controparte", accessorKey: "controparte" },
-      { header: "Ultima udienza", accessorKey: "ultimaUdienza" },
+      { header: "Ultima udienza", accessorKey: "ultimaUdienza", cell: ({ getValue }) => formattaData(getValue() as string) },
       { header: "Data udienza", accessorKey: "dataUdienza", cell: ({ getValue }) => formattaData(getValue() as string) },
       { header: "Adempimenti", accessorKey: "adempimenti" },
       { header: "Termine", accessorKey: "termine", cell: ({ getValue }) => formattaData(getValue() as string) },

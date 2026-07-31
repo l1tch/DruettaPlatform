@@ -91,8 +91,8 @@ model Causa {
   rg              String?    // R.G.
   ricorrenti      String?    // Nomi ricorrenti
   controparte     String?
-  ultimaUdienza   String?    // testo libero riassuntivo
-  dataUdienza     DateTime?
+  ultimaUdienza   DateTime?  // data dell'ultima udienza svolta
+  dataUdienza     DateTime?  // data della prossima udienza fissata
   adempimenti     String?
   termine         DateTime?
   fattoONo        Boolean    @default(false)
@@ -104,10 +104,11 @@ model Causa {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  clienti   ClienteCausa[]
-  documenti DocumentoDrive[]
-  emailLog  EmailLog[]
-  audit     AuditLog[]
+  clienti         ClienteCausa[]
+  documenti       DocumentoDrive[]
+  emailLog        EmailLog[]
+  audit           AuditLog[]
+  conflittiImport ImportCauseConflitto[]
 
   @@index([stato])
   @@index([rg])
@@ -237,6 +238,55 @@ model SuggerimentoCartella {
   aggiornatoIl    DateTime                  @updatedAt
 
   @@index([stato])
+}
+
+// ---------------------------------------------------------------------------
+// Import periodico delle cause da file Excel su Drive. Ogni riga viene
+// abbinata a una causa esistente tramite R.G.: se non c'e' corrispondenza si
+// crea una nuova causa (l'Excel e' considerato fonte autorevole per i
+// fascicoli nuovi), se c'e' corrispondenza i campi vuoti in piattaforma
+// vengono completati ma un valore gia' presente e diverso da quello
+// nell'Excel non viene MAI sovrascritto in automatico: finisce in coda come
+// ImportCauseConflitto per una scelta manuale.
+// ---------------------------------------------------------------------------
+
+enum StatoConflittoImport {
+  IN_ATTESA
+  TENUTO_VALORE_ATTUALE
+  APPLICATO_VALORE_EXCEL
+}
+
+model ImportCauseConflitto {
+  id             String               @id @default(cuid())
+  importLogId    String
+  causaId        String
+  campo          String               // nome del campo Causa in conflitto
+  valoreAttuale  String?
+  valoreExcel    String?
+  rigaExcel      Int
+  stato          StatoConflittoImport @default(IN_ATTESA)
+  createdAt      DateTime             @default(now())
+
+  importLog ImportCauseLog @relation(fields: [importLogId], references: [id], onDelete: Cascade)
+  causa     Causa          @relation(fields: [causaId], references: [id], onDelete: Cascade)
+
+  @@index([stato])
+  @@index([causaId])
+}
+
+model ImportCauseLog {
+  id                String   @id @default(cuid())
+  eseguitoIl        DateTime @default(now())
+  eseguitoDaId      String?  // null se lanciato dal cron
+  righeTotali       Int
+  righeCreate       Int
+  righeAggiornate   Int      // cause esistenti con almeno un campo vuoto completato
+  righeInvariate    Int
+  righeConflitto    Int
+  righeScartate     Int
+  dettagliScartate  Json?    // [{riga, motivo}]
+
+  conflitti ImportCauseConflitto[]
 }
 
 // ---------------------------------------------------------------------------

@@ -54,7 +54,7 @@ async function main() {
       rg: "1234/2026",
       ricorrenti: "Mario Rossi",
       controparte: "INPS",
-      ultimaUdienza: "Prima udienza",
+      ultimaUdienza: new Date("2026-06-10"),
       dataUdienza: new Date("2026-09-15"),
       adempimenti: "Deposito memoria integrativa",
       termine: new Date("2026-09-01"),

@@ -41,6 +41,18 @@ configurazione Google Workspace/Cloud) vedere [DEPLOYMENT.md](./DEPLOYMENT.md).
   cartella) finisce in coda di revisione in **Suggerimenti Drive**: la
   piattaforma non crea né sovrascrive mai un collegamento da sola in questi
   casi, va confermata da un avvocato/segreteria.
+- **Import automatico da Excel**: un job orario legge il file Excel delle
+  cause su Drive (colonne Fascicolo, Drive, Tribunale, R.G., Nomi ricorrenti,
+  Controparte, Data ultima udienza, Data udienza, Adempimenti, Termine, Fatto
+  o no, Proposta trasmessa, Data proposta, Note, Procure 185; un foglio per
+  stato). Le righe vengono validate (tipo dei dati, formato R.G.) e abbinate
+  a una causa esistente tramite R.G.: se non c'è corrispondenza si crea un
+  nuovo fascicolo, se un campo in piattaforma è vuoto viene completato con il
+  valore Excel, ma un valore già presente e diverso da quello del file **non
+  viene mai sovrascritto automaticamente** — finisce in coda di revisione in
+  **Import Excel**, dove un avvocato/segreteria sceglie quale valore tenere.
+  Disponibile anche un pulsante "Importa ora" per forzare un aggiornamento
+  immediato.
 - **Email automatiche**: promemoria per udienze e termini in scadenza nelle
   successive 48 ore, inviati tramite Gmail; ogni invio (manuale o automatico)
   è tracciato in un log.
@@ -144,8 +156,9 @@ Vedere `.env.example` per l'elenco completo con descrizione. In sintesi:
 | `ALLOWED_EMAIL_DOMAINS` | Domini email autorizzati ad accedere |
 | `INITIAL_ADMIN_EMAIL` | Email che riceve il ruolo ADMIN al primo accesso |
 | `GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` | Cartella radice delle cause pendenti, per la scansione automatica (facoltativa) |
+| `GOOGLE_DRIVE_FILE_CAUSE_ID` | File Excel delle cause su Drive, per l'import automatico (facoltativa) |
 | `FIELD_ENCRYPTION_KEY` | Chiave AES-256 per la cifratura dei campi sensibili |
-| `CRON_SECRET` | Token per gli endpoint invocati da cron (promemoria, scansione Drive) |
+| `CRON_SECRET` | Token per gli endpoint invocati da cron (promemoria, scansione Drive, import Excel) |
 
 ## Promemoria automatici
 
@@ -188,13 +201,42 @@ La logica di decisione (`pianificaAzioniScansione` in `src/lib/driveScan.ts`)
 è pura e separata dalle chiamate a Drive/DB, per poter essere verificata con
 test mirati senza credenziali reali.
 
+## Import automatico da Excel
+
+L'endpoint `POST /api/cause/importa-excel` (stessa protezione cron delle
+altre due, invocabile anche manualmente da un utente con permesso
+"cause:scrivi" tramite il pulsante "Importa ora" nella pagina **Import
+Excel**) legge il file indicato in `GOOGLE_DRIVE_FILE_CAUSE_ID` e per ogni
+riga:
+
+1. Valida i dati: fascicolo obbligatorio, R.G. nel formato `numero/anno`
+   (righe che falliscono questi controlli vengono scartate e riportate con il
+   motivo, non importate); date e valori booleani vengono interpretati in
+   più formati comuni (es. date `gg/mm/aaaa`, booleani `Sì/No/Vero/Falso/1/0`)
+   e le celle vuote non vengono mai confuse con un valore esplicito.
+2. Abbozza il fascicolo tramite R.G. contro le cause già presenti.
+3. **Nessuna corrispondenza** → crea il fascicolo (l'Excel è considerato
+   fonte autorevole per le cause nuove).
+4. **Corrispondenza, campo vuoto in piattaforma** → lo completa con il
+   valore Excel.
+5. **Corrispondenza, valore diverso e già presente** (incluso lo stato/foglio,
+   es. una causa spostata da "Pendenti" a "Concluse") → **non scrive nulla**:
+   il conflitto finisce in coda nella pagina Import Excel con vecchio e nuovo
+   valore affiancati, va risolto a mano scegliendo quale tenere.
+
+Ogni esecuzione produce un riepilogo (righe create/completate/invariate/in
+conflitto/scartate) consultabile nella stessa pagina. Come per la scansione
+Drive, la logica di validazione e decisione (`elaboraRiga`,
+`pianificaImportazione` in `src/lib/excelImport.ts`) è pura e testata senza
+bisogno di un file reale o di credenziali Google.
+
 ## Struttura del progetto
 
 ```
-prisma/schema.prisma       Modello dati (cause, clienti, collegamenti, suggerimenti Drive, audit, auth)
-src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail, scansione cartelle
-src/app/api/                API REST (cause, clienti, collegamenti, drive, email, utenti)
-src/app/dashboard/          Pagine applicative (cause, clienti, collegamenti, suggerimenti Drive, utenti)
+prisma/schema.prisma       Modello dati (cause, clienti, collegamenti, suggerimenti Drive, import Excel, audit, auth)
+src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail, scansione cartelle, import Excel
+src/app/api/                API REST (cause, clienti, collegamenti, drive, email, import, utenti)
+src/app/dashboard/          Pagine applicative (cause, clienti, collegamenti, suggerimenti Drive, import Excel, utenti)
 src/components/             DataGrid stile foglio di calcolo, form guidati, modali di conferma
 ```
 

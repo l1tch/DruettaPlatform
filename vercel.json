@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/email/automatiche", "schedule": "0 * * * *" },
-    { "path": "/api/drive/scansione", "schedule": "0 * * * *" }
+    { "path": "/api/drive/scansione", "schedule": "0 * * * *" },
+    { "path": "/api/cause/importa-excel", "schedule": "0 * * * *" }
   ]
 }
