@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { scaricaFile } from "@/lib/googleDrive";
 import { estraiAnnoRg } from "@/lib/convenzioneNomi";
 import { registraAudit } from "@/lib/audit";
+import { estraiTestoCella, estraiUrlCella } from "@/lib/excelCellUtils";
 import { StatoCausa, Prisma } from "@prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -66,7 +67,9 @@ export function analizzaBooleano(raw: unknown): RisultatoBooleano {
   if (typeof raw === "number") return { valore: raw !== 0, riconosciuto: true };
   if (raw === null || raw === undefined) return { valore: null, riconosciuto: true };
 
-  const testo = normalizzaIntestazione(String(raw));
+  const testoGrezzo = estraiTestoCella(raw);
+  if (testoGrezzo === null) return { valore: null, riconosciuto: true };
+  const testo = normalizzaIntestazione(testoGrezzo);
   if (testo === "") return { valore: null, riconosciuto: true };
   if (VALORI_VERI.has(testo)) return { valore: true, riconosciuto: true };
   if (VALORI_FALSI.has(testo)) return { valore: false, riconosciuto: true };
@@ -90,7 +93,9 @@ export function analizzaData(raw: unknown): RisultatoData {
     return isNaN(d.getTime()) ? { valore: null, riconosciuto: false } : { valore: d, riconosciuto: true };
   }
 
-  const testo = String(raw).trim();
+  const testoGrezzo = estraiTestoCella(raw);
+  if (testoGrezzo === null) return { valore: null, riconosciuto: true };
+  const testo = testoGrezzo;
   const isoMatch = testo.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     const d = new Date(testo);
@@ -144,10 +149,11 @@ export interface RigaParsata {
   dati: CausaDaImport | null; // null se scartata
 }
 
+// Estrae il testo di una cella gestendo anche celle-hyperlink e rich text
+// (vedi src/lib/excelCellUtils.ts): un link "Inserisci collegamento
+// ipertestuale" non è una stringa nuda in exceljs.
 function testoONull(raw: unknown): string | null {
-  if (raw === null || raw === undefined) return null;
-  const s = String(raw).trim();
-  return s === "" ? null : s;
+  return estraiTestoCella(raw);
 }
 
 // Trasforma una riga grezza (oggetto con chiavi = nomi di campo Causa, valori
@@ -199,7 +205,7 @@ export function elaboraRiga(numeroRiga: number, stato: StatoCausa, grezza: Recor
     avvisi,
     dati: {
       fascicolo,
-      driveFolderUrl: testoONull(grezza.driveFolderUrl),
+      driveFolderUrl: estraiUrlCella(grezza.driveFolderUrl),
       tribunale: testoONull(grezza.tribunale),
       rg,
       ricorrenti: testoONull(grezza.ricorrenti),
