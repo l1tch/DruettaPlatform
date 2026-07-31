@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { scaricaFile } from "@/lib/googleDrive";
 import { estraiIdDaLinkDrive } from "@/lib/googleDrive";
 import { registraAudit } from "@/lib/audit";
+import { encryptField, decryptField } from "@/lib/crypto";
 import { estraiTestoCella, estraiUrlCella } from "@/lib/excelCellUtils";
 import { normalizzaIntestazione, analizzaBooleano, analizzaData, valoreVuoto, valoriDiversi } from "@/lib/excelValueParsing";
 import { StatoPratica, CategoriaPratica, Prisma } from "@prisma/client";
@@ -94,7 +95,10 @@ export interface PraticaDaImport {
   citta: string | null;
   nome: string | null;
   cognome: string | null;
-  datiAnagraficiCifrato: string | null;
+  // Testo in chiaro (indirizzo + codice fiscale): cifrato solo al momento
+  // della scrittura su Prisma (vedi datiAnagraficiCifrato nello schema), mai
+  // qui, cosi' il parsing resta puro e testabile senza FIELD_ENCRYPTION_KEY.
+  datiAnagrafici: string | null;
   controparte: string | null;
   appuntamenti: string | null;
   note: string | null;
@@ -189,7 +193,7 @@ export function elaboraRigaPratica(numeroRiga: number, nomeFoglio: string, stato
       citta: testoONull(grezza.citta),
       nome,
       cognome,
-      datiAnagraficiCifrato: datiAnagrafici,
+      datiAnagrafici,
       controparte: testoONull(grezza.controparte),
       appuntamenti: testoONull(grezza.appuntamenti),
       note: testoONull(grezza.note),
@@ -221,7 +225,7 @@ const CAMPI_CONFRONTABILI_PRATICA = [
   "tipologia",
   "nome",
   "cognome",
-  "datiAnagraficiCifrato",
+  "datiAnagrafici",
   "controparte",
   "appuntamenti",
   "note",
@@ -244,8 +248,13 @@ export interface PraticaEsistentePerImport {
   driveFolderId: string | null;
   stato: StatoPratica;
   categoria: CategoriaPratica;
+  // NB: la chiave "datiAnagrafici" va valorizzata dal chiamante con il testo
+  // GIA' DECIFRATO (decryptField(datiAnagraficiCifrato)): questa funzione
+  // confronta solo valori in chiaro, non sa nulla di cifratura.
   [campo: string]: unknown;
 }
+
+const CAMPI_SENSIBILI_PRATICA = new Set(["datiAnagrafici"]);
 
 export interface ConflittoCampoPratica {
   campo: string;
@@ -399,8 +408,14 @@ export async function importaPraticheDaExcel(userId: string, driveFileId: string
     cartelleCoinvolte.length > 0
       ? await prisma.pratica.findMany({ where: { driveFolderId: { in: cartelleCoinvolte } } })
       : [];
+  // Il confronto con l'Excel avviene sempre in chiaro: la versione cifrata
+  // non viene mai esposta alla logica di pianificazione.
+  const praticheEsistentiPerConfronto: PraticaEsistentePerImport[] = praticheEsistenti.map((p) => ({
+    ...p,
+    datiAnagrafici: decryptField(p.datiAnagraficiCifrato),
+  }));
 
-  const azioni = pianificaImportazionePratiche(righe, praticheEsistenti as unknown as PraticaEsistentePerImport[]);
+  const azioni = pianificaImportazionePratiche(righe, praticheEsistentiPerConfronto);
 
   const risultato: RisultatoImportPratiche = {
     righeTotali: righe.length,
@@ -414,41 +429,65 @@ export async function importaPraticheDaExcel(userId: string, driveFileId: string
   };
 
   const conflittiDaSalvare: Omit<Prisma.ImportPraticaConflittoCreateManyInput, "importLogId">[] = [];
-  const conflittiPraticaId: string[] = [];
 
   for (const azione of azioni) {
     switch (azione.tipo) {
       case "crea": {
+        const { datiAnagrafici, ...datiSenzaAnagrafici } = azione.dati;
         const pratica = await prisma.pratica.create({
           data: {
-            ...azione.dati,
+            ...datiSenzaAnagrafici,
+            datiAnagraficiCifrato: datiAnagrafici ? encryptField(datiAnagrafici) : null,
             cartaceo: azione.dati.cartaceo ?? false,
             procura: azione.dati.procura ?? false,
             pagatoCapitale: azione.dati.pagatoCapitale ?? false,
             pagatoSpeseLegali: azione.dati.pagatoSpeseLegali ?? false,
           },
         });
-        await registraAudit({ azione: "CREAZIONE", entita: "Pratica", entitaId: pratica.id, utenteId: eseguitoDaId, dopo: pratica });
+        await registraAudit({ azione: "CREAZIONE", entita: "Pratica", entitaId: pratica.id, utenteId: eseguitoDaId, dopo: { ...pratica, datiAnagraficiCifrato: undefined } });
         risultato.righeCreate++;
         break;
       }
       case "completa": {
+        const { datiAnagrafici, ...campiSenzaAnagrafici } = azione.campiDaRiempire;
+        const campiScrittura: Prisma.PraticaUpdateInput = { ...campiSenzaAnagrafici };
+        if (datiAnagrafici !== undefined) {
+          campiScrittura.datiAnagraficiCifrato = datiAnagrafici ? encryptField(datiAnagrafici) : null;
+        }
         const prima = await prisma.pratica.findUnique({ where: { id: azione.praticaId } });
-        const dopo = await prisma.pratica.update({ where: { id: azione.praticaId }, data: azione.campiDaRiempire });
-        await registraAudit({ azione: "MODIFICA", entita: "Pratica", entitaId: azione.praticaId, utenteId: eseguitoDaId, prima, dopo });
+        const dopo = await prisma.pratica.update({ where: { id: azione.praticaId }, data: campiScrittura });
+        await registraAudit({
+          azione: "MODIFICA",
+          entita: "Pratica",
+          entitaId: azione.praticaId,
+          utenteId: eseguitoDaId,
+          prima: prima ? { ...prima, datiAnagraficiCifrato: undefined } : prima,
+          dopo: { ...dopo, datiAnagraficiCifrato: undefined },
+        });
         risultato.righeAggiornate++;
         break;
       }
       case "conflitto": {
         for (const c of azione.conflitti) {
+          // Il testo in chiaro dei campi sensibili (indirizzo/CF) non finisce
+          // mai nella tabella dei conflitti: solo un promemoria che rimanda
+          // alla scheda della pratica per la revisione.
+          const redatto = CAMPI_SENSIBILI_PRATICA.has(c.campo);
           conflittiDaSalvare.push({
             praticaId: azione.praticaId,
             campo: c.campo,
-            valoreAttuale: c.valoreAttuale instanceof Date ? c.valoreAttuale.toISOString() : String(c.valoreAttuale ?? ""),
-            valoreExcel: c.valoreExcel instanceof Date ? c.valoreExcel.toISOString() : String(c.valoreExcel ?? ""),
+            valoreAttuale: redatto
+              ? "[dato sensibile cifrato: vedere la scheda della pratica]"
+              : c.valoreAttuale instanceof Date
+                ? c.valoreAttuale.toISOString()
+                : String(c.valoreAttuale ?? ""),
+            valoreExcel: redatto
+              ? "[dato sensibile cifrato: vedere la scheda della pratica]"
+              : c.valoreExcel instanceof Date
+                ? c.valoreExcel.toISOString()
+                : String(c.valoreExcel ?? ""),
             rigaExcel: azione.riga.numeroRiga,
           });
-          conflittiPraticaId.push(azione.praticaId);
         }
         risultato.righeConflitto++;
         break;
