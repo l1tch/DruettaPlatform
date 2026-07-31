@@ -219,10 +219,15 @@ riga:
    fonte autorevole per le cause nuove).
 4. **Corrispondenza, campo vuoto in piattaforma** → lo completa con il
    valore Excel.
-5. **Corrispondenza, valore diverso e già presente** (incluso lo stato/foglio,
-   es. una causa spostata da "Pendenti" a "Concluse") → **non scrive nulla**:
+5. **Corrispondenza, valore diverso e già presente** → **non scrive nulla**:
    il conflitto finisce in coda nella pagina Import Excel con vecchio e nuovo
-   valore affiancati, va risolto a mano scegliendo quale tenere.
+   valore affiancati, va risolto a mano scegliendo quale tenere. Questo vale
+   anche per lo stato/foglio (es. una causa spostata da "Pendenti" a
+   "Concluse") — ma **solo se il file contiene realmente più fogli con righe
+   in stati diversi**. Con un file a foglio unico (es. solo le pendenti, per
+   ridurre i conflitti) lo stato non viene mai confrontato né toccato: non ha
+   senso segnalare come "conflitto" ogni causa già conclusa ancora presente
+   nel foglio, dato che il file non sta comunicando nulla sul suo stato.
 
 Ogni esecuzione produce un riepilogo (righe create/completate/invariate/in
 conflitto/scartate) consultabile nella stessa pagina. Come per la scansione

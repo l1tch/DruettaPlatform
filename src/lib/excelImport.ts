@@ -287,6 +287,16 @@ function valoriDiversi(a: unknown, b: unknown): boolean {
 export function pianificaImportazione(righe: RigaParsata[], causeEsistenti: CausaEsistentePerImport[]): AzioneImportRiga[] {
   const azioni: AzioneImportRiga[] = [];
 
+  // Lo stato viene confrontato/segnalato SOLO se il file dimostra di
+  // tracciare più stati (es. fogli "Pendenti" + "Concluse" con righe in
+  // entrambi). Un file con un solo foglio (tipicamente solo le pendenti) non
+  // porta nessuna informazione affidabile sullo stato delle altre cause:
+  // confrontarlo comunque genererebbe un conflitto "stato" per ogni causa
+  // già conclusa/in esecuzione ancora presente nel foglio, ad ogni singolo
+  // import. In quel caso lo stato non viene mai toccato né segnalato.
+  const statiTracciati = new Set(righe.filter((r) => !r.scartata).map((r) => r.stato));
+  const statoAffidabile = statiTracciati.size > 1;
+
   for (const riga of righe) {
     if (riga.scartata || !riga.dati) {
       azioni.push({ tipo: "scartata", riga });
@@ -309,12 +319,13 @@ export function pianificaImportazione(righe: RigaParsata[], causeEsistenti: Caus
     const campiDaRiempire: Partial<CausaScrivibile> = {};
     const conflitti: ConflittoCampo[] = [];
 
-    // Lo stato non è mai "vuoto" (ha sempre un valore di default), quindi un
-    // foglio Excel diverso da quello in cui si trova la causa oggi (es. la
-    // causa passa da "Pendenti" a "Concluse") è sempre un potenziale
-    // cambiamento voluto: va confermato come gli altri conflitti, mai
-    // applicato in automatico.
-    if (riga.stato !== candidato.stato) {
+    // Lo stato non è mai "vuoto" (ha sempre un valore di default): se il file
+    // dimostra di tracciare più stati (più fogli con righe reali), un foglio
+    // diverso da quello in cui si trova la causa oggi è un potenziale
+    // cambiamento voluto e va confermato come gli altri conflitti, mai
+    // applicato in automatico. Con un file a foglio unico lo stato non è un
+    // segnale affidabile e non viene toccato né segnalato.
+    if (statoAffidabile && riga.stato !== candidato.stato) {
       conflitti.push({ campo: "stato", valoreAttuale: candidato.stato, valoreExcel: riga.stato });
     }
 
