@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { scansionaCartellaPendenti } from "@/lib/driveScan";
+import { cronAutorizzato } from "@/lib/apiHelpers";
 
 export const dynamic = "force-dynamic";
 
-// Endpoint invocato da un job schedulato per scansionare la cartella Drive
+// Endpoint invocato da un job schedulato (Vercel Cron Jobs invoca via GET;
+// un cron esterno può invocare via POST) per scansionare la cartella Drive
 // radice delle cause pendenti, collegare automaticamente le corrispondenze
 // non ambigue e mettere il resto in coda di revisione. Protetto da
 // CRON_SECRET, NON da sessione utente, come /api/email/automatiche.
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  if (!secret || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ errore: "Non autorizzato" }, { status: 401 });
-  }
+async function eseguiScansione(req: NextRequest) {
+  const nonAutorizzato = cronAutorizzato(req);
+  if (nonAutorizzato) return nonAutorizzato;
 
   const rootFolderId = process.env.GOOGLE_DRIVE_CARTELLA_PENDENTI_ID;
   if (!rootFolderId) {
@@ -32,3 +32,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errore: e instanceof Error ? e.message : "Errore durante la scansione" }, { status: 500 });
   }
 }
+
+export const GET = eseguiScansione;
+export const POST = eseguiScansione;

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Permesso, assertPermesso } from "@/lib/rbac";
@@ -20,4 +20,20 @@ export function gestisciErrore(e: unknown) {
   const status = (e as { status?: number })?.status ?? 400;
   const messaggio = e instanceof Error ? e.message : "Errore imprevisto";
   return NextResponse.json({ errore: messaggio }, { status });
+}
+
+// Autorizza gli endpoint invocati da un job schedulato (nessuna sessione
+// utente). Accetta sia l'header custom "x-cron-secret" (cron esterni, es.
+// GitHub Actions) sia "Authorization: Bearer <CRON_SECRET>", la convenzione
+// usata automaticamente da Vercel Cron Jobs quando è presente la variabile
+// d'ambiente CRON_SECRET.
+export function cronAutorizzato(req: NextRequest): NextResponse | null {
+  const secret = process.env.CRON_SECRET;
+  const daHeaderCustom = req.headers.get("x-cron-secret");
+  const daBearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+
+  if (!secret || (daHeaderCustom !== secret && daBearer !== secret)) {
+    return NextResponse.json({ errore: "Non autorizzato" }, { status: 401 });
+  }
+  return null;
 }

@@ -4,6 +4,9 @@ Applicazione web per la gestione di clienti, fascicoli (cause) e documenti di
 uno studio legale, con invio email e archiviazione documenti integrati con
 Google (Gmail e Drive).
 
+Per il deploy in produzione su servizi managed (Vercel, database Postgres UE,
+configurazione Google Workspace/Cloud) vedere [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Funzionalità principali
 
 - **Login con ruolo**: accesso tramite account Google dello studio (OAuth),

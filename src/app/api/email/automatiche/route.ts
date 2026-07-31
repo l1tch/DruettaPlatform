@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { inviaEmail, corpoPromemoriaUdienza, corpoPromemoriaTermine } from "@/lib/gmail";
+import { cronAutorizzato } from "@/lib/apiHelpers";
 
 export const dynamic = "force-dynamic";
 
-// Endpoint invocato da un job schedulato (es. cron esterno) per inviare
-// automaticamente promemoria udienze/termini in scadenza nelle prossime 48 ore.
-// Protetto da CRON_SECRET, NON da sessione utente (nessun utente e' loggato
-// quando parte il cron).
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  if (!secret || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ errore: "Non autorizzato" }, { status: 401 });
-  }
+// Endpoint invocato da un job schedulato (Vercel Cron Jobs invoca via GET;
+// un cron esterno può invocare via POST) per inviare automaticamente
+// promemoria udienze/termini in scadenza nelle prossime 48 ore. Protetto da
+// CRON_SECRET, NON da sessione utente (nessun utente e' loggato quando parte
+// il cron).
+async function eseguiPromemoria(req: NextRequest) {
+  const nonAutorizzato = cronAutorizzato(req);
+  if (nonAutorizzato) return nonAutorizzato;
 
   const mittente = process.env.INITIAL_ADMIN_EMAIL;
   const admin = mittente ? await prisma.user.findUnique({ where: { email: mittente } }) : null;
@@ -78,3 +78,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ inviate, errori });
 }
+
+export const GET = eseguiPromemoria;
+export const POST = eseguiPromemoria;
