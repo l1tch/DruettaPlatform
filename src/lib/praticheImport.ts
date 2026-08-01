@@ -469,23 +469,17 @@ export async function importaPraticheDaExcel(userId: string, driveFileId: string
       }
       case "conflitto": {
         for (const c of azione.conflitti) {
-          // Il testo in chiaro dei campi sensibili (indirizzo/CF) non finisce
-          // mai nella tabella dei conflitti: solo un promemoria che rimanda
-          // alla scheda della pratica per la revisione.
-          const redatto = CAMPI_SENSIBILI_PRATICA.has(c.campo);
+          // I campi sensibili (indirizzo/CF) vengono cifrati anche nella
+          // tabella dei conflitti, non lasciati in chiaro: chi rivede il
+          // conflitto li vede decifrati solo attraverso l'API (vedi
+          // /api/pratiche-conflitti), mai leggendo direttamente il DB.
+          const sensibile = CAMPI_SENSIBILI_PRATICA.has(c.campo);
+          const formatta = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v ?? ""));
           conflittiDaSalvare.push({
             praticaId: azione.praticaId,
             campo: c.campo,
-            valoreAttuale: redatto
-              ? "[dato sensibile cifrato: vedere la scheda della pratica]"
-              : c.valoreAttuale instanceof Date
-                ? c.valoreAttuale.toISOString()
-                : String(c.valoreAttuale ?? ""),
-            valoreExcel: redatto
-              ? "[dato sensibile cifrato: vedere la scheda della pratica]"
-              : c.valoreExcel instanceof Date
-                ? c.valoreExcel.toISOString()
-                : String(c.valoreExcel ?? ""),
+            valoreAttuale: sensibile ? (c.valoreAttuale ? encryptField(formatta(c.valoreAttuale)) : null) : formatta(c.valoreAttuale),
+            valoreExcel: sensibile ? (c.valoreExcel ? encryptField(formatta(c.valoreExcel)) : null) : formatta(c.valoreExcel),
             rigaExcel: azione.riga.numeroRiga,
           });
         }

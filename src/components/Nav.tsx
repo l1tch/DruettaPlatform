@@ -9,6 +9,7 @@ import { Role } from "@prisma/client";
 const VOCI = [
   { href: "/dashboard", etichetta: "Panoramica" },
   { href: "/dashboard/cause", etichetta: "Cause" },
+  { href: "/dashboard/pratiche", etichetta: "Pratiche" },
   { href: "/dashboard/clienti", etichetta: "Clienti" },
   { href: "/dashboard/collegamenti", etichetta: "Collegamenti" },
   { href: "/dashboard/suggerimenti-drive", etichetta: "Suggerimenti Drive" },

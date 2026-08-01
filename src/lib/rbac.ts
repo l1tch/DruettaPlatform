@@ -7,6 +7,9 @@ export type Permesso =
   | "cause:leggi"
   | "cause:scrivi"
   | "cause:elimina"
+  | "pratiche:leggi"
+  | "pratiche:scrivi"
+  | "pratiche:elimina"
   | "clienti:leggi"
   | "clienti:scrivi"
   | "clienti:elimina"
@@ -20,6 +23,9 @@ const MATRICE: Record<Role, Permesso[]> = {
     "cause:leggi",
     "cause:scrivi",
     "cause:elimina",
+    "pratiche:leggi",
+    "pratiche:scrivi",
+    "pratiche:elimina",
     "clienti:leggi",
     "clienti:scrivi",
     "clienti:elimina",
@@ -32,6 +38,9 @@ const MATRICE: Record<Role, Permesso[]> = {
     "cause:leggi",
     "cause:scrivi",
     "cause:elimina",
+    "pratiche:leggi",
+    "pratiche:scrivi",
+    "pratiche:elimina",
     "clienti:leggi",
     "clienti:scrivi",
     "clienti:elimina",
@@ -42,13 +51,15 @@ const MATRICE: Record<Role, Permesso[]> = {
   SEGRETERIA: [
     "cause:leggi",
     "cause:scrivi",
+    "pratiche:leggi",
+    "pratiche:scrivi",
     "clienti:leggi",
     "clienti:scrivi",
     "drive:leggi",
     "drive:scrivi",
     "email:invia",
   ],
-  SOLA_LETTURA: ["cause:leggi", "clienti:leggi", "drive:leggi"],
+  SOLA_LETTURA: ["cause:leggi", "pratiche:leggi", "clienti:leggi", "drive:leggi"],
 };
 
 export function haPermesso(ruolo: Role, permesso: Permesso): boolean {

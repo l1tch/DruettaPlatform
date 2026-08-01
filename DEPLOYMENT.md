@@ -90,11 +90,17 @@ importante dell'intero setup di sicurezza.
    (`openssl rand -base64 32`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `ALLOWED_EMAIL_DOMAINS`, `INITIAL_ADMIN_EMAIL`,
    `GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` (se usata),
-   `GOOGLE_DRIVE_FILE_CAUSE_ID` (se si usa l'import da Excel),
+   `GOOGLE_DRIVE_FILE_CAUSE_ID` (se si usa l'import da Excel delle cause),
+   `GOOGLE_DRIVE_FILE_PRATICHE_ID` (se si usa l'import da Excel delle
+   pratiche — vedi nota sotto, non ancora schedulato in `vercel.json`),
    `FIELD_ENCRYPTION_KEY` (`openssl rand -hex 32`), `CRON_SECRET`
    (`openssl rand -hex 16`).
 3. **Cron Jobs**: già configurati in `vercel.json` (promemoria email,
-   scansione Drive e import Excel delle cause, ogni ora). Vercel autentica automaticamente le chiamate
+   scansione Drive e import Excel delle cause, ogni ora). L'import delle
+   pratiche è disponibile solo come azione manuale finché non si conferma la
+   struttura del file reale (vedi README, sezione Pratiche): per attivarlo
+   come cron aggiungere una voce `"/api/pratiche/importa-excel"` a
+   `vercel.json` una volta pronto. Vercel autentica automaticamente le chiamate
    cron con l'header `Authorization: Bearer <CRON_SECRET>` quando la
    variabile `CRON_SECRET` è impostata: nessuna configurazione aggiuntiva
    richiesta. La frequenza minima disponibile dipende dal piano Vercel:

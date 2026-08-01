@@ -29,6 +29,40 @@ export const causaSchema = z.object({
 
 export type CausaInput = z.infer<typeof causaSchema>;
 
+export const praticaSchema = z.object({
+  stato: z.enum(["PENDENTI", "CONCLUSE", "IN_ESECUZIONE", "DA_PAGARE", "DIMESSI_ESCLUSI"]),
+  categoria: z.enum(["RAIDER", "CAUSA_SINGOLA", "DA_CLASSIFICARE"]),
+  tipologia: z.string().nullish(),
+  // Link alla cartella Drive già esistente: stessa politica di Causa,
+  // verificato lato server ma mai creato dalla piattaforma. È anche la
+  // chiave usata dall'import Excel per abbinare le righe alle pratiche.
+  driveFolderUrl: z.string().min(1, "Il link alla cartella Drive è obbligatorio"),
+  rg: z.string().nullish(),
+  citta: z.string().nullish(),
+  nome: z.string().nullish(),
+  cognome: z.string().nullish(),
+  // Testo in chiaro (indirizzo + CF): cifrato lato server prima del
+  // salvataggio, mai persistito così com'è.
+  datiAnagrafici: z.string().nullish(),
+  controparte: z.string().nullish(),
+  appuntamenti: z.string().nullish(),
+  note: z.string().nullish(),
+  email: z.string().email("Email non valida").nullish().or(z.literal("")),
+  telefono: z.string().nullish(),
+  scadenza: dataOpzionale,
+  impugnativa: dataOpzionale,
+  dataLicenziamento: dataOpzionale,
+  cartaceo: z.boolean().default(false),
+  procura: z.boolean().default(false),
+  emissioneFatturaSpeseLegali: z.string().nullish(),
+  pagatoCapitale: z.boolean().default(false),
+  pagatoSpeseLegali: z.boolean().default(false),
+  precetto: z.string().nullish(),
+  esecuzione: z.string().nullish(),
+});
+
+export type PraticaInput = z.infer<typeof praticaSchema>;
+
 export const clienteSchema = z.object({
   citta: z.string().nullish(),
   cognome: z.string().min(1, "Il cognome è obbligatorio"),

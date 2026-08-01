@@ -157,6 +157,7 @@ Vedere `.env.example` per l'elenco completo con descrizione. In sintesi:
 | `INITIAL_ADMIN_EMAIL` | Email che riceve il ruolo ADMIN al primo accesso |
 | `GOOGLE_DRIVE_CARTELLA_PENDENTI_ID` | Cartella radice delle cause pendenti, per la scansione automatica (facoltativa) |
 | `GOOGLE_DRIVE_FILE_CAUSE_ID` | File Excel delle cause su Drive, per l'import automatico (facoltativa) |
+| `GOOGLE_DRIVE_FILE_PRATICHE_ID` | File Excel delle pratiche (licenziamenti/cause singole) su Drive, per l'import automatico (facoltativa) |
 | `FIELD_ENCRYPTION_KEY` | Chiave AES-256 per la cifratura dei campi sensibili |
 | `CRON_SECRET` | Token per gli endpoint invocati da cron (promemoria, scansione Drive, import Excel) |
 
@@ -235,13 +236,58 @@ Drive, la logica di validazione e decisione (`elaboraRiga`,
 `pianificaImportazione` in `src/lib/excelImport.ts`) è pura e testata senza
 bisogno di un file reale o di credenziali Google.
 
+## Pratiche (licenziamenti/cause singole) e import da Excel
+
+**Pratica** è un'entità separata da Causa: copre i licenziamenti di riders e
+le cause singole (infortuni/sinistri), che nella fonte Excel reale vivono in
+tabelle distinte ma in piattaforma convergono in un'unica vista filtrabile
+per stato (schede Pendenti/Concluse/In esecuzione/Da pagare/Dimessi-Esclusi)
+e per categoria (pill Raider/Causa singola/Da classificare, in
+`/dashboard/pratiche`).
+
+L'endpoint `POST /api/pratiche/importa-excel` (stessa protezione cron delle
+altre importazioni, invocabile anche manualmente con permesso
+"pratiche:scrivi" tramite il pulsante "Importa da Excel" nella pagina
+**Pratiche**) legge il file indicato in `GOOGLE_DRIVE_FILE_PRATICHE_ID`.
+Differenze rispetto all'import Cause, dovute alla struttura della fonte
+reale:
+
+1. **Solo 5 fogli vengono importati**: Pendenti, Concluse, In esecuzione, Da
+   pagare, Dimessi/Esclusi. Altri fogli della cartella di lavoro (es. viste
+   per categoria come "Licenziamenti"/"Cause singole", o fogli di appunti)
+   vengono ignorati senza segnalazione, per evitare di importare due volte la
+   stessa pratica o di trattare come "stato" un foglio che non lo è.
+2. **La chiave di abbinamento è il link alla cartella Drive** (`driveFolderId`),
+   non l'R.G.: nel file reale l'R.G. è spesso assente o poco affidabile per le
+   pratiche, mentre il link alla cartella è sempre presente. Una riga senza un
+   link Drive riconoscibile viene scartata, mai creata "orfana".
+3. **La categoria (Raider / Causa singola)** viene derivata dal testo della
+   colonna Tipologia; se non riconosciuto, la pratica viene comunque
+   importata ma marcata "Da classificare" per la revisione manuale.
+4. **Stato e categoria non vengono mai aggiornati in automatico** in caso di
+   valore diverso da quello già presente: finiscono in coda come gli altri
+   conflitti di campo.
+5. I **dati anagrafici sensibili** (indirizzo e codice fiscale) vengono
+   cifrati prima del salvataggio, coerentemente con il codice fiscale dei
+   Clienti; anche nella tabella dei conflitti di import restano cifrati e
+   vengono decifrati solo lato server per un utente già autorizzato a leggere
+   le pratiche.
+
+Come per Causa, la logica di validazione e decisione (`elaboraRigaPratica`,
+`pianificaImportazionePratiche` in `src/lib/praticheImport.ts`) è pura e
+testata senza bisogno di un file reale o di credenziali Google.
+
+> Nota: `GOOGLE_DRIVE_FILE_PRATICHE_ID` non è ancora collegata a un cron in
+> `vercel.json` — va aggiunta insieme all'ID del file reale quando disponibile
+> (l'import manuale dalla pagina Pratiche funziona già).
+
 ## Struttura del progetto
 
 ```
-prisma/schema.prisma       Modello dati (cause, clienti, collegamenti, suggerimenti Drive, import Excel, audit, auth)
-src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail, scansione cartelle, import Excel
-src/app/api/                API REST (cause, clienti, collegamenti, drive, email, import, utenti)
-src/app/dashboard/          Pagine applicative (cause, clienti, collegamenti, suggerimenti Drive, import Excel, utenti)
+prisma/schema.prisma       Modello dati (cause, pratiche, clienti, collegamenti, suggerimenti Drive, import Excel, audit, auth)
+src/lib/                   Servizi: auth, RBAC, cifratura, audit, Google Drive/Gmail, scansione cartelle, import Excel (cause e pratiche)
+src/app/api/                API REST (cause, pratiche, clienti, collegamenti, drive, email, import, utenti)
+src/app/dashboard/          Pagine applicative (cause, pratiche, clienti, collegamenti, suggerimenti Drive, import Excel, utenti)
 src/components/             DataGrid stile foglio di calcolo, form guidati, modali di conferma
 ```
 
